@@ -45,6 +45,11 @@ export default function AdminPage() {
   const [seeding, setSeeding] = useState(false)
   const [seedMessage, setSeedMessage] = useState('')
 
+  // Update state
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [updating, setUpdating] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState('')
+
   // Ad form state
   const [showAdForm, setShowAdForm] = useState(false)
   const [adForm, setAdForm] = useState({
@@ -137,9 +142,45 @@ export default function AdminPage() {
         const res = await fetch('/api/admin/ads')
         const data = await res.json()
         setAds(Array.isArray(data) ? data : [])
+      } else if (tab === 'update') {
+        const res = await fetch('/api/admin/update')
+        const data = await res.json()
+        if (!data.error) setUpdateInfo(data)
+        else setUpdateMessage(data.error)
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const checkForUpdate = async () => {
+    setLoading(true)
+    setUpdateMessage('')
+    try {
+      const res = await fetch('/api/admin/update')
+      const data = await res.json()
+      if (data.error) setUpdateMessage(data.error)
+      else setUpdateInfo(data)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const applyUpdate = async () => {
+    if (!confirm('This will pull the latest code, install dependencies, run migrations, and rebuild the app. Continue?')) return
+    setUpdating(true)
+    setUpdateMessage('')
+    try {
+      const res = await fetch('/api/admin/update', { method: 'POST' })
+      const data = await res.json()
+      if (data.error) {
+        setUpdateMessage(`Error: ${data.error}\n${data.details ?? ''}\n${data.output ?? ''}`)
+      } else {
+        setUpdateMessage(data.output ?? data.message)
+        await checkForUpdate()
+      }
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -275,6 +316,7 @@ export default function AdminPage() {
           { id: 'models', label: 'Models', icon: Package },
           { id: 'users', label: 'Users', icon: Users },
           { id: 'ads', label: 'Ads', icon: Megaphone },
+          { id: 'update', label: 'Update', icon: RefreshCw },
         ] as { id: Tab; label: string; icon: React.ElementType }[]).map((tab) => (
           <button
             key={tab.id}
@@ -572,6 +614,76 @@ export default function AdminPage() {
                   <div className="text-center py-8 text-gray-400 text-sm">No ads created yet</div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Update */}
+          {activeTab === 'update' && (
+            <div className="max-w-2xl space-y-6">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Application Update</h3>
+                  <button
+                    onClick={checkForUpdate}
+                    disabled={loading}
+                    className="flex items-center gap-2 text-sm text-orange-500 hover:text-orange-600 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    Check
+                  </button>
+                </div>
+
+                {updateInfo ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Current version</div>
+                        <div className="font-mono font-medium text-gray-900">{updateInfo.currentVersion}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Branch</div>
+                        <div className="font-mono font-medium text-gray-900">{updateInfo.branch}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Local commit</div>
+                        <div className="font-mono text-gray-700">{updateInfo.currentSha}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{updateInfo.currentMessage}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Remote commit</div>
+                        <div className="font-mono text-gray-700">{updateInfo.latestSha}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{updateInfo.latestMessage}</div>
+                      </div>
+                    </div>
+
+                    {updateInfo.updateAvailable ? (
+                      <div className="flex items-center gap-3 mt-4 p-3 bg-orange-50 rounded-xl border border-orange-100">
+                        <div className="flex-1 text-sm text-orange-800">A new version is available.</div>
+                        <button
+                          onClick={applyUpdate}
+                          disabled={updating}
+                          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                        >
+                          <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
+                          {updating ? 'Updating…' : 'Apply Update'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-4 p-3 bg-green-50 rounded-xl border border-green-100 text-sm text-green-800">
+                        ✓ You are running the latest version.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Click "Check" to compare local code with the remote repository.</p>
+                )}
+              </div>
+
+              {updateMessage && (
+                <div className="bg-gray-900 rounded-2xl p-4">
+                  <pre className="text-xs text-green-400 whitespace-pre-wrap overflow-auto max-h-96">{updateMessage}</pre>
+                </div>
+              )}
             </div>
           )}
         </>
