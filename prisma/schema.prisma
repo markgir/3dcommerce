@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("USER")
+  avatar    String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  models        Model3D[]
+  downloads     Download[]
+  likes         Like[]
+  comments      Comment[]
+}
+
+model Category {
+  id     String    @id @default(cuid())
+  name   String
+  slug   String    @unique
+  icon   String?
+  color  String?
+  models Model3D[]
+}
+
+model Model3D {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  categoryId  String
+  tags        String   @default("")
+  userId      String
+  downloads   Int      @default(0)
+  likesCount  Int      @default(0)
+  views       Int      @default(0)
+  isFeatured  Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  license     String   @default("CC BY 4.0")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category      Category     @relation(fields: [categoryId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  images        ModelImage[]
+  files         ModelFile[]
+  downloadsList Download[]
+  likesList     Like[]
+  comments      Comment[]
+}
+
+model ModelImage {
+  id      String  @id @default(cuid())
+  modelId String
+  url     String
+  isMain  Boolean @default(false)
+  model   Model3D @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+model ModelFile {
+  id       String  @id @default(cuid())
+  modelId  String
+  filename String
+  url      String
+  size     Int     @default(0)
+  model    Model3D @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+model Download {
+  id        String   @id @default(cuid())
+  modelId   String
+  userId    String?
+  createdAt DateTime @default(now())
+  model     Model3D  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Like {
+  id      String  @id @default(cuid())
+  modelId String
+  userId  String
+  model   Model3D @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([modelId, userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  modelId   String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  model     Model3D  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Advertisement {
+  id        String  @id @default(cuid())
+  title     String
+  type      String  @default("CUSTOM")
+  content   String?
+  imageUrl  String?
+  linkUrl   String?
+  placement String  @default("SIDEBAR")
+  isActive  Boolean @default(true)
+  width     Int?
+  height    Int?
+}
