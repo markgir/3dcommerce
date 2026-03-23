@@ -18,9 +18,20 @@ import {
   Eye,
   EyeOff,
   Database,
+  RefreshCw,
 } from 'lucide-react'
 
-type Tab = 'overview' | 'models' | 'users' | 'ads'
+type Tab = 'overview' | 'models' | 'users' | 'ads' | 'update'
+
+interface UpdateInfo {
+  currentVersion: string
+  currentSha: string
+  latestSha: string
+  currentMessage: string
+  latestMessage: string
+  branch: string
+  updateAvailable: boolean
+}
 
 export default function AdminPage() {
   const { data: session, status } = useSession()
