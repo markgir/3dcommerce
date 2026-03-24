@@ -22,8 +22,12 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    // Auto-assign ADMIN role to the first registered user when no admin exists
+    const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
+    const role = adminCount === 0 ? 'ADMIN' : 'USER'
+
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword },
+      data: { name, email, password: hashedPassword, role },
     })
 
     return Response.json(
