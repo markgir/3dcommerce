@@ -22,8 +22,15 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword },
+    // Use a transaction to atomically check for existing admins and create the user.
+    // The first registered user gets ADMIN role when no admin exists in the database.
+    const user = await prisma.$transaction(async (tx) => {
+      const adminCount = await tx.user.count({ where: { role: 'ADMIN' } })
+      const role = adminCount === 0 ? 'ADMIN' : 'USER'
+
+      return tx.user.create({
+        data: { name, email, password: hashedPassword, role },
+      })
     })
 
     return Response.json(

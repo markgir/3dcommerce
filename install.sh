@@ -211,8 +211,14 @@ fi
 
 # --- npm (comes with Node.js) ---
 if ! command -v npm &>/dev/null; then
-  echo "❌ npm is not available. Please reinstall Node.js (it bundles npm)."
-  exit 1
+  echo "  ⚠ npm is not available – attempting to install Node.js 20 (which bundles npm)..."
+  install_node
+  # Re-check after installation attempt
+  if ! command -v npm &>/dev/null; then
+    echo "❌ npm is still not available after installing Node.js."
+    echo "   Please install Node.js 20+ manually: https://nodejs.org/"
+    exit 1
+  fi
 fi
 echo "  ✓ npm $(npm -v)"
 
