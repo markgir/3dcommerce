@@ -19,9 +19,10 @@ import {
   EyeOff,
   Database,
   RefreshCw,
+  Bug,
 } from 'lucide-react'
 
-type Tab = 'overview' | 'models' | 'users' | 'ads' | 'update'
+type Tab = 'overview' | 'models' | 'users' | 'ads' | 'update' | 'debug'
 
 interface UpdateInfo {
   currentVersion: string
@@ -31,6 +32,58 @@ interface UpdateInfo {
   latestMessage: string
   branch: string
   updateAvailable: boolean
+}
+
+interface DebugInfo {
+  timestamp: string
+  system: {
+    platform: string
+    release: string
+    hostname: string
+    uptime: string
+    cpus: number
+    totalMemory: string
+    freeMemory: string
+    memoryUsage: string
+  }
+  runtime: {
+    nodeVersion: string
+    npmVersion: string
+    processUptime: string
+    pid: number
+    cwd: string
+  }
+  application: {
+    name: string
+    version: string
+    nextBuild: string
+    nodeModules: string
+    envFile: string
+    envVars: string[]
+  }
+  git: {
+    version: string
+    branch: string
+    lastCommit: string
+    uncommittedChanges: string
+    remote: string
+  }
+  database: {
+    exists: boolean
+    size: string
+    path: string
+    migrations: string[]
+  }
+  storage: {
+    uploadedImages: string
+    uploadedFiles: string
+    disk: string
+  }
+  dependencies: {
+    production: Record<string, string>
+    dev: Record<string, string>
+  }
+  nodeEnv: string
 }
 
 export default function AdminPage() {
@@ -49,6 +102,10 @@ export default function AdminPage() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [updating, setUpdating] = useState(false)
   const [updateMessage, setUpdateMessage] = useState('')
+
+  // Debug state
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null)
+  const [debugError, setDebugError] = useState('')
 
   // Ad form state
   const [showAdForm, setShowAdForm] = useState(false)
@@ -147,6 +204,12 @@ export default function AdminPage() {
         const data = await res.json()
         if (!data.error) setUpdateInfo(data)
         else setUpdateMessage(data.error)
+      } else if (tab === 'debug') {
+        setDebugError('')
+        const res = await fetch('/api/admin/debug')
+        const data = await res.json()
+        if (data.error) setDebugError(data.error)
+        else setDebugInfo(data)
       }
     } finally {
       setLoading(false)
@@ -317,6 +380,7 @@ export default function AdminPage() {
           { id: 'users', label: 'Users', icon: Users },
           { id: 'ads', label: 'Ads', icon: Megaphone },
           { id: 'update', label: 'Update', icon: RefreshCw },
+          { id: 'debug', label: 'Debug', icon: Bug },
         ] as { id: Tab; label: string; icon: React.ElementType }[]).map((tab) => (
           <button
             key={tab.id}
@@ -684,6 +748,176 @@ export default function AdminPage() {
                   <pre className="text-xs text-green-400 whitespace-pre-wrap overflow-auto max-h-96">{updateMessage}</pre>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Debug */}
+          {activeTab === 'debug' && (
+            <div className="max-w-4xl space-y-6">
+              {debugError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{debugError}</div>
+              )}
+
+              {debugInfo ? (
+                <>
+                  <div className="text-xs text-gray-400 mb-2">
+                    Collected at: {new Date(debugInfo.timestamp).toLocaleString()} · Environment: {debugInfo.nodeEnv}
+                  </div>
+
+                  {/* System */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      System
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                      <div><div className="text-xs text-gray-500">Platform</div><div className="font-mono text-gray-900">{debugInfo.system.platform}</div></div>
+                      <div><div className="text-xs text-gray-500">Hostname</div><div className="font-mono text-gray-900">{debugInfo.system.hostname}</div></div>
+                      <div><div className="text-xs text-gray-500">CPUs</div><div className="font-mono text-gray-900">{debugInfo.system.cpus}</div></div>
+                      <div><div className="text-xs text-gray-500">Uptime</div><div className="font-mono text-gray-900">{debugInfo.system.uptime}</div></div>
+                      <div><div className="text-xs text-gray-500">Total Memory</div><div className="font-mono text-gray-900">{debugInfo.system.totalMemory}</div></div>
+                      <div><div className="text-xs text-gray-500">Free Memory</div><div className="font-mono text-gray-900">{debugInfo.system.freeMemory}</div></div>
+                      <div><div className="text-xs text-gray-500">Memory Usage</div><div className="font-mono text-gray-900">{debugInfo.system.memoryUsage}</div></div>
+                      <div><div className="text-xs text-gray-500">OS Release</div><div className="font-mono text-gray-900 truncate" title={debugInfo.system.release}>{debugInfo.system.release}</div></div>
+                    </div>
+                  </div>
+
+                  {/* Runtime */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Runtime
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                      <div><div className="text-xs text-gray-500">Node.js</div><div className="font-mono text-gray-900">{debugInfo.runtime.nodeVersion}</div></div>
+                      <div><div className="text-xs text-gray-500">npm</div><div className="font-mono text-gray-900">{debugInfo.runtime.npmVersion}</div></div>
+                      <div><div className="text-xs text-gray-500">Process PID</div><div className="font-mono text-gray-900">{debugInfo.runtime.pid}</div></div>
+                      <div><div className="text-xs text-gray-500">Process Uptime</div><div className="font-mono text-gray-900">{debugInfo.runtime.processUptime}</div></div>
+                    </div>
+                    <div className="mt-3 text-sm">
+                      <div className="text-xs text-gray-500">Working Directory</div>
+                      <div className="font-mono text-gray-900 text-xs break-all">{debugInfo.runtime.cwd}</div>
+                    </div>
+                  </div>
+
+                  {/* Application */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                      Application
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-4">
+                      <div><div className="text-xs text-gray-500">Name</div><div className="font-mono text-gray-900">{debugInfo.application.name}</div></div>
+                      <div><div className="text-xs text-gray-500">Version</div><div className="font-mono text-gray-900">{debugInfo.application.version}</div></div>
+                      <div>
+                        <div className="text-xs text-gray-500">Next.js Build</div>
+                        <div className={`font-mono text-sm ${debugInfo.application.nextBuild === 'Present' ? 'text-green-600' : 'text-red-600'}`}>
+                          {debugInfo.application.nextBuild}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">node_modules</div>
+                        <div className={`font-mono text-sm ${debugInfo.application.nodeModules === 'Present' ? 'text-green-600' : 'text-red-600'}`}>
+                          {debugInfo.application.nodeModules}
+                        </div>
+                      </div>
+                    </div>
+                    {debugInfo.application.envVars.length > 0 && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-2">Environment Variables ({debugInfo.application.envFile})</div>
+                        <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-0.5">
+                          {debugInfo.application.envVars.map((v, i) => (
+                            <div key={i}>{v}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Git */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                      Git
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                      <div><div className="text-xs text-gray-500">Git Version</div><div className="font-mono text-gray-900">{debugInfo.git.version}</div></div>
+                      <div><div className="text-xs text-gray-500">Branch</div><div className="font-mono text-gray-900">{debugInfo.git.branch}</div></div>
+                    </div>
+                    <div className="text-sm mb-3">
+                      <div className="text-xs text-gray-500">Last Commit</div>
+                      <div className="font-mono text-gray-900 text-xs">{debugInfo.git.lastCommit}</div>
+                    </div>
+                    <div className="text-sm mb-3">
+                      <div className="text-xs text-gray-500">Uncommitted Changes</div>
+                      <pre className="font-mono text-xs text-gray-700 bg-gray-50 rounded-lg p-2 mt-1 whitespace-pre-wrap">{debugInfo.git.uncommittedChanges}</pre>
+                    </div>
+                    <div className="text-sm">
+                      <div className="text-xs text-gray-500">Remote</div>
+                      <pre className="font-mono text-xs text-gray-700 bg-gray-50 rounded-lg p-2 mt-1 whitespace-pre-wrap">{debugInfo.git.remote}</pre>
+                    </div>
+                  </div>
+
+                  {/* Database & Storage */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                      Database &amp; Storage
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-4">
+                      <div>
+                        <div className="text-xs text-gray-500">Database</div>
+                        <div className={`font-mono text-sm ${debugInfo.database.exists ? 'text-green-600' : 'text-red-600'}`}>
+                          {debugInfo.database.exists ? `${debugInfo.database.path} (${debugInfo.database.size})` : 'Not found'}
+                        </div>
+                      </div>
+                      <div><div className="text-xs text-gray-500">Uploaded Images</div><div className="font-mono text-gray-900">{debugInfo.storage.uploadedImages}</div></div>
+                      <div><div className="text-xs text-gray-500">Uploaded Files</div><div className="font-mono text-gray-900">{debugInfo.storage.uploadedFiles}</div></div>
+                      <div><div className="text-xs text-gray-500">Disk</div><div className="font-mono text-gray-900 text-xs truncate" title={debugInfo.storage.disk}>{debugInfo.storage.disk}</div></div>
+                    </div>
+                    {debugInfo.database.migrations.length > 0 && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-2">Migrations ({debugInfo.database.migrations.length})</div>
+                        <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-0.5">
+                          {debugInfo.database.migrations.map((m) => (
+                            <div key={m}>✓ {m}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dependencies */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      Dependencies
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-2">Production ({Object.keys(debugInfo.dependencies.production).length})</div>
+                        <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-0.5 max-h-60 overflow-auto">
+                          {Object.entries(debugInfo.dependencies.production).map(([name, version]) => (
+                            <div key={name}>{name}: <span className="text-gray-500">{version}</span></div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-2">Development ({Object.keys(debugInfo.dependencies.dev).length})</div>
+                        <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-0.5 max-h-60 overflow-auto">
+                          {Object.entries(debugInfo.dependencies.dev).map(([name, version]) => (
+                            <div key={name}>{name}: <span className="text-gray-500">{version}</span></div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : !debugError ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                </div>
+              ) : null}
             </div>
           )}
         </>

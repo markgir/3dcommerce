@@ -24,6 +24,22 @@ A free 3D printing models sharing platform similar to [Printables.com](https://w
 
 ## Installation
 
+### Quick Install (One Line)
+
+```bash
+git clone https://github.com/markgir/3dcommerce.git 3dprinthub && cd 3dprinthub && bash install.sh
+```
+
+This single command clones the repository and runs the automated installer, which:
+1. Checks prerequisites (Node.js 20+, npm, git)
+2. Creates a `.env` file with an auto-generated secret
+3. Installs all dependencies
+4. Sets up the SQLite database and applies migrations
+5. Seeds demo data (admin + demo user accounts)
+6. Builds the production application
+
+After installation, start the app with `npm run dev` (development) or `npm start` (production).
+
 ### Local / VPS (General)
 
 #### 1. Install dependencies
@@ -229,6 +245,7 @@ Access at `/admin` (requires ADMIN role). Features:
 - User management (promote/demote admin role)
 - Advertisement management (create/toggle/delete ads)
 - **Update management** – check for and apply updates from the GitHub repository
+- **Debug / Diagnostics** – view system info, runtime, git status, database, storage, environment variables, and installed dependencies
 - Seed demo data button
 
 ## License
