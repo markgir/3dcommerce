@@ -107,9 +107,94 @@ echo "============================================="
 echo ""
 
 # ---------------------------------------------------------------------------
-# 1. Check & install prerequisites
+# 1. Install system-level prerequisites
 # ---------------------------------------------------------------------------
-echo "🔍 Checking prerequisites..."
+echo "🔍 Checking & installing system prerequisites..."
+
+# --- Helper: batch-install a list of system packages ---
+pkg_install_many() {
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update -qq
+    # shellcheck disable=SC2068
+    sudo apt-get install -y -qq $@
+  elif command -v dnf &>/dev/null; then
+    # shellcheck disable=SC2068
+    sudo dnf install -y $@
+  elif command -v yum &>/dev/null; then
+    # shellcheck disable=SC2068
+    sudo yum install -y $@
+  elif command -v brew &>/dev/null; then
+    # shellcheck disable=SC2068
+    brew install $@
+  else
+    echo "❌ No supported package manager found (apt-get, dnf, yum, brew)."
+    echo "   Please install the following manually: $*"
+    exit 1
+  fi
+}
+
+# Build the list of missing system packages
+MISSING_PKGS=""
+
+# --- git (required for updates) ---
+if ! command -v git &>/dev/null; then
+  MISSING_PKGS="$MISSING_PKGS git"
+fi
+
+# --- curl (required to install Node.js via NodeSource) ---
+if ! command -v curl &>/dev/null; then
+  MISSING_PKGS="$MISSING_PKGS curl"
+fi
+
+# --- openssl (used for secret generation & Prisma engine) ---
+if ! command -v openssl &>/dev/null; then
+  MISSING_PKGS="$MISSING_PKGS openssl"
+fi
+
+# --- Build tools (may be required for native Node.js modules) ---
+detect_os
+if ! command -v gcc &>/dev/null || ! command -v make &>/dev/null; then
+  case "$OS_FAMILY" in
+    *debian*|*ubuntu*)
+      MISSING_PKGS="$MISSING_PKGS build-essential"
+      ;;
+    *rhel*|*fedora*|*centos*|almalinux|rocky)
+      MISSING_PKGS="$MISSING_PKGS gcc make"
+      ;;
+    macos)
+      # Xcode Command Line Tools provide gcc/make on macOS
+      if ! xcode-select -p &>/dev/null; then
+        echo "  → Xcode Command Line Tools are required for build tools."
+        echo "    A system dialog will open – please follow the prompts."
+        echo "    After installation completes, re-run this script if it fails."
+        xcode-select --install 2>/dev/null || true
+        # Wait briefly for the installer to register
+        sleep 5
+      fi
+      ;;
+  esac
+fi
+
+# --- Install everything that is missing in one pass ---
+if [ -n "$MISSING_PKGS" ]; then
+  echo "  → Installing missing system packages:$MISSING_PKGS"
+  # shellcheck disable=SC2086
+  pkg_install_many $MISSING_PKGS
+  echo "  ✓ System packages installed"
+else
+  echo "  ✓ All system packages already present"
+fi
+
+# Verify critical tools after installation attempt
+for tool in git curl; do
+  if ! command -v "$tool" &>/dev/null; then
+    echo "❌ $tool is still not available after installation attempt."
+    echo "   Please install $tool manually and re-run this script."
+    exit 1
+  fi
+done
+echo "  ✓ git $(git --version)"
+echo "  ✓ curl $(curl --version | head -1)"
 
 # --- Node.js ---
 if ! command -v node &>/dev/null; then
@@ -130,18 +215,6 @@ if ! command -v npm &>/dev/null; then
   exit 1
 fi
 echo "  ✓ npm $(npm -v)"
-
-# --- git (optional but recommended) ---
-if ! command -v git &>/dev/null; then
-  echo "  ⚠ git not found – attempting to install..."
-  if pkg_install git; then
-    echo "  ✓ git $(git --version | awk '{print $3}')"
-  else
-    echo "  ⚠ git not found – update feature will not work"
-  fi
-else
-  echo "  ✓ git $(git --version | awk '{print $3}')"
-fi
 
 echo ""
 
