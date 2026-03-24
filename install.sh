@@ -7,11 +7,93 @@
 
 set -e
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" 2>/dev/null)" && pwd 2>/dev/null || pwd)"
+# ---------------------------------------------------------------------------
+# Helper: detect OS family
+# ---------------------------------------------------------------------------
+detect_os() {
+  if [ -f /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    OS_ID="${ID}"
+    OS_FAMILY="${ID_LIKE:-$ID}"
+  elif [ "$(uname)" = "Darwin" ]; then
+    OS_ID="macos"
+    OS_FAMILY="macos"
+  else
+    OS_ID="unknown"
+    OS_FAMILY="unknown"
+  fi
+}
 
-# If the script was piped via curl, clone the repository first
+# ---------------------------------------------------------------------------
+# Helper: install a package via the system package manager
+# ---------------------------------------------------------------------------
+pkg_install() {
+  local pkg="$1"
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update -qq && sudo apt-get install -y -qq "$pkg"
+  elif command -v yum &>/dev/null; then
+    sudo yum install -y "$pkg"
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y "$pkg"
+  elif command -v brew &>/dev/null; then
+    brew install "$pkg"
+  else
+    return 1
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Helper: install Node.js 20 via NodeSource (Debian/RHEL) or Brew (macOS)
+# ---------------------------------------------------------------------------
+install_node() {
+  detect_os
+  echo "  → Attempting to install Node.js 20..."
+
+  case "$OS_FAMILY" in
+    *debian*|*ubuntu*)
+      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+      sudo apt-get install -y -qq nodejs
+      ;;
+    *rhel*|*fedora*|*centos*|almalinux|rocky)
+      curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+      sudo yum install -y nodejs || sudo dnf install -y nodejs
+      ;;
+    macos)
+      if command -v brew &>/dev/null; then
+        brew install node@20
+      else
+        echo "❌ Homebrew not found. Install Node.js 20+ manually: https://nodejs.org/"
+        exit 1
+      fi
+      ;;
+    *)
+      echo "❌ Could not auto-install Node.js on this OS ($OS_ID)."
+      echo "   Please install Node.js 20+ manually: https://nodejs.org/"
+      exit 1
+      ;;
+  esac
+
+  if ! command -v node &>/dev/null; then
+    echo "❌ Node.js installation failed. Please install manually: https://nodejs.org/"
+    exit 1
+  fi
+  echo "  ✓ Node.js $(node -v) installed"
+}
+
+# ---------------------------------------------------------------------------
+# Resolve repository directory
+# ---------------------------------------------------------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" 2>/dev/null || echo ".")" && pwd)"
+REPO_DIR="${SCRIPT_DIR}"
+
+# If the script was piped via curl (no package.json nearby), clone first
 if [ ! -f "$REPO_DIR/package.json" ]; then
   echo "📥 Cloning 3D Print Hub repository..."
+  if ! command -v git &>/dev/null; then
+    echo "  → git is required to clone the repository. Installing..."
+    pkg_install git || { echo "❌ Could not install git. Please install it manually."; exit 1; }
+  fi
   git clone https://github.com/markgir/3dcommerce.git 3dprinthub
   cd 3dprinthub
   REPO_DIR="$(pwd)"
@@ -25,38 +107,40 @@ echo "============================================="
 echo ""
 
 # ---------------------------------------------------------------------------
-# 1. Check prerequisites
+# 1. Check & install prerequisites
 # ---------------------------------------------------------------------------
 echo "🔍 Checking prerequisites..."
 
-# Check Node.js
+# --- Node.js ---
 if ! command -v node &>/dev/null; then
-  echo "❌ Node.js is not installed."
-  echo "   Please install Node.js 20+ from https://nodejs.org/"
-  echo "   Or use: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"
-  exit 1
-fi
-
-NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-if [ "$NODE_VERSION" -lt 20 ]; then
-  echo "⚠️  Node.js version $(node -v) detected. Version 20+ is recommended."
-  echo "   Continuing anyway..."
+  echo "  ⚠ Node.js not found – installing automatically..."
+  install_node
 else
-  echo "  ✓ Node.js $(node -v)"
+  NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
+  if [ "$NODE_VERSION" -lt 20 ] 2>/dev/null; then
+    echo "  ⚠ Node.js $(node -v) detected (version 20+ recommended). Continuing..."
+  else
+    echo "  ✓ Node.js $(node -v)"
+  fi
 fi
 
-# Check npm
+# --- npm (comes with Node.js) ---
 if ! command -v npm &>/dev/null; then
-  echo "❌ npm is not installed. Please install Node.js which includes npm."
+  echo "❌ npm is not available. Please reinstall Node.js (it bundles npm)."
   exit 1
 fi
 echo "  ✓ npm $(npm -v)"
 
-# Check git (optional, needed for updates)
-if command -v git &>/dev/null; then
-  echo "  ✓ git $(git --version | awk '{print $3}')"
+# --- git (optional but recommended) ---
+if ! command -v git &>/dev/null; then
+  echo "  ⚠ git not found – attempting to install..."
+  if pkg_install git; then
+    echo "  ✓ git $(git --version | awk '{print $3}')"
+  else
+    echo "  ⚠ git not found – update feature will not work"
+  fi
 else
-  echo "  ⚠ git not found – update feature will not work"
+  echo "  ✓ git $(git --version | awk '{print $3}')"
 fi
 
 echo ""
@@ -96,7 +180,20 @@ fi
 echo ""
 
 # ---------------------------------------------------------------------------
-# 3. Install dependencies
+# 3. Create required directories
+# ---------------------------------------------------------------------------
+echo "📁 Creating required directories..."
+
+mkdir -p public/uploads/images public/uploads/files
+# Ensure .gitkeep files exist so git tracks the empty directories
+[ -f public/uploads/images/.gitkeep ] || touch public/uploads/images/.gitkeep
+[ -f public/uploads/files/.gitkeep ]  || touch public/uploads/files/.gitkeep
+
+echo "  ✓ Upload directories ready"
+echo ""
+
+# ---------------------------------------------------------------------------
+# 4. Install dependencies
 # ---------------------------------------------------------------------------
 echo "📦 Installing dependencies..."
 npm install
@@ -104,7 +201,7 @@ echo "  ✓ Dependencies installed"
 echo ""
 
 # ---------------------------------------------------------------------------
-# 4. Set up the database
+# 5. Set up the database
 # ---------------------------------------------------------------------------
 echo "🗄️  Setting up the database..."
 
@@ -112,29 +209,29 @@ echo "🗄️  Setting up the database..."
 npx prisma generate
 echo "  ✓ Prisma client generated"
 
-# Apply migrations
-if npx prisma migrate deploy 2>&1; then
-  echo "  ✓ Migrations applied"
+# Apply migrations (deploy is non-interactive and safe for automation)
+if npx prisma migrate deploy 2>&1 | tail -5; then
+  echo "  ✓ Database migrations applied"
 else
-  echo "  ℹ  No existing migrations to deploy, running initial migration..."
-  if npx prisma migrate dev --name init 2>&1; then
-    echo "  ✓ Initial migration created and applied"
-  else
-    echo "  ✓ Database ready"
-  fi
+  echo "❌ Database migration failed. Check the output above for details."
+  exit 1
 fi
 
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Seed demo data
+# 6. Seed demo data
 # ---------------------------------------------------------------------------
 echo "🌱 Seeding demo data..."
-npx tsx prisma/seed.ts 2>/dev/null && echo "  ✓ Demo data seeded" || echo "  ℹ  Seeding skipped (data may already exist)"
+if npx tsx prisma/seed.ts 2>&1 | tail -10; then
+  echo "  ✓ Demo data seeded"
+else
+  echo "  ℹ  Seeding skipped or partially completed (data may already exist)"
+fi
 echo ""
 
 # ---------------------------------------------------------------------------
-# 6. Build the application
+# 7. Build the application
 # ---------------------------------------------------------------------------
 echo "🏗️  Building the application..."
 npm run build
@@ -142,23 +239,47 @@ echo "  ✓ Build complete"
 echo ""
 
 # ---------------------------------------------------------------------------
-# 7. Summary
+# 8. Read configured URL from .env
 # ---------------------------------------------------------------------------
-echo "============================================="
-echo "  ✅ Installation complete!"
-echo "============================================="
+APP_URL="http://localhost:3000"
+if [ -f .env ]; then
+  ENV_URL=$(grep -E '^NEXTAUTH_URL=' .env 2>/dev/null | cut -d'=' -f2- | tr -d ' "'"'" || true)
+  if [ -n "$ENV_URL" ]; then
+    APP_URL="$ENV_URL"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 9. Installation summary
+# ---------------------------------------------------------------------------
 echo ""
-echo "Default accounts:"
-echo "  📧 Admin: admin@3dprinthub.com / admin123456"
-echo "  📧 User:  demo@3dprinthub.com  / demo123456"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║              ✅  INSTALLATION COMPLETE!                      ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║                                                               ║"
+echo "║  🌐 Application URL:  $APP_URL"
+echo "║  🔧 Admin Panel:      ${APP_URL}/admin"
+echo "║                                                               ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║  👤 DEFAULT ACCOUNTS                                         ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║                                                               ║"
+echo "║  🔑 Admin account:                                           ║"
+echo "║     Email:    admin@3dprinthub.com                            ║"
+echo "║     Password: admin123456                                     ║"
+echo "║                                                               ║"
+echo "║  🔑 Demo user account:                                       ║"
+echo "║     Email:    demo@3dprinthub.com                             ║"
+echo "║     Password: demo123456                                      ║"
+echo "║                                                               ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║  🚀 START THE APPLICATION                                    ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║                                                               ║"
+echo "║  Development mode:   npm run dev                              ║"
+echo "║  Production mode:    npm start                                ║"
+echo "║                                                               ║"
+echo "║  Update later:       bash update.sh                           ║"
+echo "║                                                               ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Start the application:"
-echo "  Development:  npm run dev"
-echo "  Production:   npm start"
-echo ""
-echo "Open: http://localhost:3000"
-echo ""
-echo "Admin panel: http://localhost:3000/admin"
-echo ""
-echo "To update later: bash update.sh"
-echo "============================================="
