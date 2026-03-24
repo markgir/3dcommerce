@@ -31,12 +31,13 @@ git clone https://github.com/markgir/3dcommerce.git 3dprinthub && cd 3dprinthub 
 ```
 
 This single command clones the repository and runs the automated installer, which:
-1. Checks prerequisites (Node.js 20+, npm, git)
-2. Creates a `.env` file with an auto-generated secret
-3. Installs all dependencies
-4. Sets up the SQLite database and applies migrations
-5. Seeds demo data (admin + demo user accounts)
-6. Builds the production application
+1. Installs system prerequisites (git, curl, openssl, build tools) if missing
+2. Checks & installs Node.js 20+ and npm if missing
+3. Creates a `.env` file with an auto-generated secret
+4. Installs all npm dependencies
+5. Sets up the SQLite database and applies migrations
+6. Seeds demo data (admin + demo user accounts)
+7. Builds the production application
 
 After installation, start the app with `npm run dev` (development) or `npm start` (production).
 
