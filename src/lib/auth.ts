@@ -23,17 +23,21 @@ export const authOptions: NextAuthOptions = {
         const isValid = await bcrypt.compare(credentials.password, user.password)
         if (!isValid) return null
 
-        // Auto-promote the first user to ADMIN on sign-in if no admins exist
+        // Auto-promote the first user to ADMIN on sign-in if no admins exist.
+        // Uses a transaction for atomicity, consistent with the registration route.
         let role = user.role
         if (role !== 'ADMIN') {
-          const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
-          if (adminCount === 0) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { role: 'ADMIN' },
-            })
-            role = 'ADMIN'
-          }
+          role = await prisma.$transaction(async (tx) => {
+            const adminCount = await tx.user.count({ where: { role: 'ADMIN' } })
+            if (adminCount === 0) {
+              await tx.user.update({
+                where: { id: user.id },
+                data: { role: 'ADMIN' },
+              })
+              return 'ADMIN'
+            }
+            return user.role
+          })
         }
 
         return {
