@@ -440,6 +440,9 @@ export default function AdminPage() {
         setSettingsLogoPreview(null)
         refreshSiteSettings()
         setTimeout(() => setSettingsMessage(''), 3000)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setSettingsMessage(`Error: ${data.error || 'Failed to upload logo'}`)
       }
     } finally {
       setSettingsSaving(false)
@@ -459,6 +462,9 @@ export default function AdminPage() {
         setSettingsLogoPreview(null)
         refreshSiteSettings()
         setTimeout(() => setSettingsMessage(''), 3000)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setSettingsMessage(`Error: ${data.error || 'Failed to remove logo'}`)
       }
     } finally {
       setSettingsSaving(false)
