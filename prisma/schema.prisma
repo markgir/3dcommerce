@@ -115,3 +115,12 @@ model Advertisement {
   width     Int?
   height    Int?
 }
+
+model Translation {
+  id     String @id @default(cuid())
+  locale String
+  key    String
+  value  String
+
+  @@unique([locale, key])
+}
