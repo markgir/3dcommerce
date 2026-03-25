@@ -240,7 +240,41 @@ Ad placements are available in: header, sidebar, inline content, footer, and dow
 
 ## Admin Panel
 
-Access at `/admin` (requires ADMIN role). Features:
+Access the admin dashboard at `/admin`. It requires your account to have the **ADMIN** role.
+
+### How to Get Admin Access
+
+There are three ways to obtain admin privileges:
+
+1. **Use the seeded admin account** (easiest)
+   If you ran `npx tsx prisma/seed.ts` (or `bash install.sh`, which seeds automatically), an admin account is already created:
+   - **Email:** `admin@3dprinthub.com`
+   - **Password:** `admin123456`
+   
+   Sign in at `/auth/signin` with these credentials and then navigate to `/admin`.
+
+2. **Be the first user to register**
+   On a fresh database (no seed), the very first user to register via `/auth/signup` is automatically assigned the ADMIN role. All subsequent users receive the default USER role.
+
+3. **Get promoted by an existing admin**
+   Any existing admin can promote another user from the admin dashboard:
+   1. Log in as admin and go to `/admin`.
+   2. Open the **Users** tab.
+   3. Click the role button next to the target user to toggle between USER and ADMIN.
+
+### Troubleshooting "Access Denied"
+
+If you see *"Access Denied – You need admin privileges to access this page"*:
+
+| Symptom | Solution |
+|---|---|
+| Not logged in | Sign in first at `/auth/signin`. The admin page now redirects you there automatically. |
+| Logged in but not admin | Sign in with the seeded admin account (`admin@3dprinthub.com` / `admin123456`), or ask an existing admin to promote your account. |
+| Fresh install, no seed data | Register a new account — the first user automatically becomes admin. |
+| Seeded but forgot admin password | Reset the database (`npx prisma migrate reset`) and re-seed (`npx tsx prisma/seed.ts`), then sign in with the default admin credentials above. |
+
+### Admin Features
+
 - Overview stats (models, users, downloads, ads)
 - Model management (feature/hide models)
 - User management (promote/demote admin role)
