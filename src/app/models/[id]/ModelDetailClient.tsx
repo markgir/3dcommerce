@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import AdBanner from '@/components/ads/AdBanner'
+import VendorProductsSection from '@/components/vendor/VendorProductsSection'
 import { useTranslation } from '@/lib/i18n'
 import {
   Download,
@@ -203,6 +204,11 @@ export default function ModelDetailClient({ model }: { model: Model }) {
 
           {/* Ad */}
           <AdBanner placement="inline" className="mb-6" />
+
+          {/* Vendor Products - above comments */}
+          <div className="mb-6">
+            <VendorProductsSection limit={4} />
+          </div>
 
           {/* Comments */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">

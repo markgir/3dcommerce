@@ -372,7 +372,9 @@ export default function AdminPage() {
   }
 
   const toggleUserRole = async (id: string, currentRole: string) => {
-    const newRole = currentRole === 'ADMIN' ? 'USER' : 'ADMIN'
+    const roleOrder = ['USER', 'VENDOR', 'ADMIN']
+    const currentIndex = roleOrder.indexOf(currentRole)
+    const newRole = roleOrder[(currentIndex + 1) % roleOrder.length]
     await fetch('/api/admin/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -695,7 +697,7 @@ export default function AdminPage() {
                         <div className="text-xs text-gray-500">{user._count?.models || 0} models · {user._count?.downloads || 0} downloads</div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${user.role === 'ADMIN' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${user.role === 'ADMIN' ? 'bg-orange-100 text-orange-700' : user.role === 'VENDOR' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
                           {user.role}
                         </span>
                       </td>
@@ -706,7 +708,7 @@ export default function AdminPage() {
                             className="flex items-center gap-1 text-xs text-gray-500 hover:text-orange-500 px-2 py-1 rounded-lg hover:bg-orange-50 transition-colors"
                           >
                             <Edit className="w-3 h-3" />
-                            {user.role === 'ADMIN' ? 'Demote' : 'Promote'}
+                            {user.role === 'ADMIN' ? '→ USER' : user.role === 'VENDOR' ? '→ ADMIN' : '→ VENDOR'}
                           </button>
                         </div>
                       </td>

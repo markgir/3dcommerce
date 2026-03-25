@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import ModelCard from '@/components/models/ModelCard'
 import AdBanner from '@/components/ads/AdBanner'
+import VendorProductsSection from '@/components/vendor/VendorProductsSection'
 import { Search, Filter, SortAsc } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 
@@ -222,6 +223,9 @@ export default function ExploreContent() {
           )}
         </div>
       </div>
+
+      {/* Vendor Products - above footer */}
+      <VendorProductsSection limit={4} />
     </div>
   )
 }
