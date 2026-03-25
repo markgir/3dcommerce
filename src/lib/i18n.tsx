@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import pt from '@/lib/translations/pt'
 import en from '@/lib/translations/en'
 
@@ -8,6 +8,16 @@ export type Locale = 'pt' | 'en'
 export type TranslationKey = keyof typeof pt
 
 const translations: Record<Locale, Record<string, string>> = { pt, en }
+
+function getInitialLocale(): Locale {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('locale') as Locale | null
+    if (saved && translations[saved]) {
+      return saved
+    }
+  }
+  return 'pt'
+}
 
 interface I18nContextType {
   locale: Locale
@@ -22,15 +32,7 @@ const I18nContext = createContext<I18nContextType>({
 })
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('pt')
-
-  useEffect(() => {
-    const saved = localStorage.getItem('locale') as Locale | null
-    if (saved && translations[saved]) {
-      setLocaleState(saved)
-      document.documentElement.lang = saved
-    }
-  }, [])
+  const [locale, setLocaleState] = useState<Locale>(getInitialLocale)
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale)
