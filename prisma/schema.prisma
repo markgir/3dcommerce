@@ -124,3 +124,9 @@ model Translation {
 
   @@unique([locale, key])
 }
+
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

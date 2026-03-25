@@ -187,6 +187,24 @@ const en = {
   'lang.language': 'Language',
   'lang.pt': 'Português',
   'lang.en': 'English',
+
+  // Settings
+  'admin.settings': 'Settings',
+  'admin.settingsLogo': 'Site Logo',
+  'admin.settingsLogoDesc': 'Upload a custom logo to replace the default icon in the navbar and footer.',
+  'admin.settingsLogoUpload': 'Upload Logo',
+  'admin.settingsLogoRemove': 'Remove Logo',
+  'admin.settingsLogoCurrent': 'Current logo',
+  'admin.settingsLogoNone': 'No custom logo set. Using default icon.',
+  'admin.settingsLogoHint': 'Formats: PNG, JPG, SVG, WebP. Max 2MB.',
+  'admin.settingsLogoSaved': 'Logo updated successfully',
+  'admin.settingsLogoRemoved': 'Logo removed successfully',
+  'admin.settingsDataInfo': 'Data Information',
+  'admin.settingsDataInfoDesc': 'The following data is preserved during updates:',
+  'admin.settingsDataItem1': 'Database (users, models, comments, likes)',
+  'admin.settingsDataItem2': 'Uploaded files (images, 3D models)',
+  'admin.settingsDataItem3': 'Configuration files (.env)',
+  'admin.settingsDataItem4': 'Site settings (logo, custom translations)',
 } as const
 
 export default en

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { defaultTranslations, useTranslation, type Locale } from '@/lib/i18n'
+import { useSiteSettings } from '@/lib/siteSettings'
 import {
   LayoutDashboard,
   Package,
@@ -22,9 +23,13 @@ import {
   RefreshCw,
   Bug,
   Languages,
+  Settings,
+  ImageIcon,
+  Upload,
+  ShieldCheck,
 } from 'lucide-react'
 
-type Tab = 'overview' | 'models' | 'users' | 'ads' | 'translations' | 'update' | 'debug'
+type Tab = 'overview' | 'models' | 'users' | 'ads' | 'translations' | 'settings' | 'update' | 'debug'
 
 interface UpdateInfo {
   currentVersion: string
@@ -123,6 +128,7 @@ export default function AdminPage() {
 
   // Translations state
   const { t, refreshOverrides } = useTranslation()
+  const { logoUrl: currentLogoUrl, refresh: refreshSiteSettings } = useSiteSettings()
   const [translationLocale, setTranslationLocale] = useState<Locale>('pt')
   const [translationSearch, setTranslationSearch] = useState('')
   const [translationFilter, setTranslationFilter] = useState<'all' | 'modified'>('all')
@@ -130,6 +136,12 @@ export default function AdminPage() {
   const [editingTranslations, setEditingTranslations] = useState<Record<string, string>>({})
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [translationMessage, setTranslationMessage] = useState('')
+
+  // Settings state
+  const [settingsLogoPreview, setSettingsLogoPreview] = useState<string | null>(null)
+  const [settingsLogoFile, setSettingsLogoFile] = useState<File | null>(null)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsMessage, setSettingsMessage] = useState('')
 
   const loadTranslationOverrides = useCallback(async () => {
     try {
@@ -405,6 +417,54 @@ export default function AdminPage() {
     loadStats()
   }
 
+  const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSettingsLogoFile(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setSettingsLogoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const uploadLogo = async () => {
+    if (!settingsLogoFile) return
+    setSettingsSaving(true)
+    setSettingsMessage('')
+    try {
+      const formData = new FormData()
+      formData.append('logo', settingsLogoFile)
+      const res = await fetch('/api/admin/settings', { method: 'POST', body: formData })
+      if (res.ok) {
+        setSettingsMessage(t('admin.settingsLogoSaved' as Parameters<typeof t>[0]))
+        setSettingsLogoFile(null)
+        setSettingsLogoPreview(null)
+        refreshSiteSettings()
+        setTimeout(() => setSettingsMessage(''), 3000)
+      }
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  const removeLogo = async () => {
+    setSettingsSaving(true)
+    setSettingsMessage('')
+    try {
+      const formData = new FormData()
+      formData.append('removeLogo', 'true')
+      const res = await fetch('/api/admin/settings', { method: 'POST', body: formData })
+      if (res.ok) {
+        setSettingsMessage(t('admin.settingsLogoRemoved' as Parameters<typeof t>[0]))
+        setSettingsLogoFile(null)
+        setSettingsLogoPreview(null)
+        refreshSiteSettings()
+        setTimeout(() => setSettingsMessage(''), 3000)
+      }
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
   if (status === 'loading') {
     return (
       <div className="flex justify-center py-20">
@@ -480,6 +540,7 @@ export default function AdminPage() {
           { id: 'users', label: 'Users', icon: Users },
           { id: 'ads', label: 'Ads', icon: Megaphone },
           { id: 'translations', label: t('admin.translations' as Parameters<typeof t>[0]), icon: Languages },
+          { id: 'settings', label: t('admin.settings' as Parameters<typeof t>[0]), icon: Settings },
           { id: 'update', label: 'Update', icon: RefreshCw },
           { id: 'debug', label: 'Debug', icon: Bug },
         ] as { id: Tab; label: string; icon: React.ElementType }[]).map((tab) => (
@@ -914,6 +975,111 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Settings */}
+          {activeTab === 'settings' && (
+            <div className="max-w-2xl space-y-6">
+              {settingsMessage && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                  {settingsMessage}
+                </div>
+              )}
+
+              {/* Logo Upload */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <ImageIcon className="w-5 h-5 text-orange-500" />
+                  <h3 className="font-semibold text-gray-900">{t('admin.settingsLogo' as Parameters<typeof t>[0])}</h3>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">{t('admin.settingsLogoDesc' as Parameters<typeof t>[0])}</p>
+
+                {/* Current logo preview */}
+                {currentLogoUrl ? (
+                  <div className="mb-4">
+                    <div className="text-xs text-gray-500 mb-2">{t('admin.settingsLogoCurrent' as Parameters<typeof t>[0])}</div>
+                    <div className="inline-flex items-center gap-4 p-4 bg-gray-900 rounded-xl">
+                      <img src={currentLogoUrl} alt="Current logo" className="h-10 w-auto max-w-[200px] object-contain" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100 text-sm text-gray-500">
+                    {t('admin.settingsLogoNone' as Parameters<typeof t>[0])}
+                  </div>
+                )}
+
+                {/* New logo preview */}
+                {settingsLogoPreview && (
+                  <div className="mb-4">
+                    <div className="text-xs text-gray-500 mb-2">Preview</div>
+                    <div className="inline-flex items-center gap-4 p-4 bg-gray-900 rounded-xl">
+                      <img src={settingsLogoPreview} alt="Preview" className="h-10 w-auto max-w-[200px] object-contain" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-xl text-sm transition-colors cursor-pointer">
+                    <Upload className="w-4 h-4" />
+                    {t('admin.settingsLogoUpload' as Parameters<typeof t>[0])}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp,image/x-icon"
+                      onChange={handleLogoFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {settingsLogoFile && (
+                    <button
+                      onClick={uploadLogo}
+                      disabled={settingsSaving}
+                      className="flex items-center gap-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-xl text-sm transition-colors"
+                    >
+                      {settingsSaving ? '...' : t('common.save')}
+                    </button>
+                  )}
+
+                  {currentLogoUrl && (
+                    <button
+                      onClick={removeLogo}
+                      disabled={settingsSaving}
+                      className="flex items-center gap-2 text-red-500 hover:text-red-600 disabled:opacity-50 font-medium px-4 py-2 rounded-xl text-sm transition-colors border border-red-200 hover:border-red-300"
+                    >
+                      {t('admin.settingsLogoRemove' as Parameters<typeof t>[0])}
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">{t('admin.settingsLogoHint' as Parameters<typeof t>[0])}</p>
+              </div>
+
+              {/* Data Preservation Info */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <ShieldCheck className="w-5 h-5 text-green-500" />
+                  <h3 className="font-semibold text-gray-900">{t('admin.settingsDataInfo' as Parameters<typeof t>[0])}</h3>
+                </div>
+                <p className="text-sm text-gray-500 mb-3">{t('admin.settingsDataInfoDesc' as Parameters<typeof t>[0])}</p>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    {t('admin.settingsDataItem1' as Parameters<typeof t>[0])}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    {t('admin.settingsDataItem2' as Parameters<typeof t>[0])}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    {t('admin.settingsDataItem3' as Parameters<typeof t>[0])}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                    {t('admin.settingsDataItem4' as Parameters<typeof t>[0])}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Update */}
           {activeTab === 'update' && (
             <div className="max-w-2xl space-y-6">
@@ -981,6 +1147,17 @@ export default function AdminPage() {
                   <pre className="text-xs text-green-400 whitespace-pre-wrap overflow-auto max-h-96">{updateMessage}</pre>
                 </div>
               )}
+
+              {/* Data preservation notice */}
+              <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-blue-800">{t('admin.settingsDataInfo' as Parameters<typeof t>[0])}</span>
+                </div>
+                <p className="text-xs text-blue-700">
+                  {t('admin.settingsDataItem1' as Parameters<typeof t>[0])} · {t('admin.settingsDataItem2' as Parameters<typeof t>[0])} · {t('admin.settingsDataItem3' as Parameters<typeof t>[0])} · {t('admin.settingsDataItem4' as Parameters<typeof t>[0])}
+                </p>
+              </div>
             </div>
           )}
 

@@ -60,3 +60,6 @@ public/uploads/files/*
 
 # Build
 .next/
+
+# Local dev database
+dev.db

@@ -6,6 +6,16 @@ import path from 'path'
 import fs from 'fs'
 
 const execAsync = promisify(exec)
+const cwd = () => process.cwd()
+
+async function safeExec(cmd: string): Promise<{ stdout: string; stderr: string }> {
+  try {
+    return await execAsync(cmd, { cwd: cwd(), timeout: 15_000 })
+  } catch (err: unknown) {
+    const e = err as { stdout?: string; stderr?: string }
+    return { stdout: e.stdout ?? '', stderr: e.stderr ?? '' }
+  }
+}
 
 /** GET /api/admin/update – compare local HEAD with remote origin/main */
 export async function GET() {
@@ -15,21 +25,42 @@ export async function GET() {
   }
 
   try {
-    // Fetch latest refs from remote (read-only, no checkout)
-    await execAsync('git fetch origin --quiet', { cwd: process.cwd() })
+    // Try to fetch latest refs from remote (may fail without network)
+    const fetchResult = await safeExec('git fetch origin --quiet')
+    const fetchFailed = fetchResult.stderr.includes('fatal') || fetchResult.stderr.includes('error')
 
-    const [localRaw, remoteRaw, localMsgRaw, remoteMsgRaw, branchRaw] = await Promise.all([
-      execAsync('git rev-parse HEAD', { cwd: process.cwd() }),
-      execAsync('git rev-parse FETCH_HEAD', { cwd: process.cwd() }),
-      execAsync('git log -1 --pretty=format:%s HEAD', { cwd: process.cwd() }),
-      execAsync('git log -1 --pretty=format:%s FETCH_HEAD', { cwd: process.cwd() }),
-      execAsync('git rev-parse --abbrev-ref HEAD', { cwd: process.cwd() }),
-    ])
+    const branchRaw = await safeExec('git rev-parse --abbrev-ref HEAD')
+    const branch = branchRaw.stdout.trim() || 'main'
 
+    const localRaw = await safeExec('git rev-parse HEAD')
     const currentSha = localRaw.stdout.trim()
-    const latestSha = remoteRaw.stdout.trim()
+    const localMsgRaw = await safeExec('git log -1 --pretty=format:%s HEAD')
 
-    const pkgPath = path.join(process.cwd(), 'package.json')
+    // For remote, try FETCH_HEAD first, then origin/<branch>
+    let latestSha = currentSha
+    let latestMessage = localMsgRaw.stdout.trim()
+
+    if (!fetchFailed) {
+      // Try FETCH_HEAD
+      const remoteRaw = await safeExec('git rev-parse FETCH_HEAD')
+      const remoteSha = remoteRaw.stdout.trim()
+      if (remoteSha && !remoteRaw.stderr.includes('unknown revision')) {
+        latestSha = remoteSha
+        const remoteMsgRaw = await safeExec('git log -1 --pretty=format:%s FETCH_HEAD')
+        latestMessage = remoteMsgRaw.stdout.trim()
+      } else {
+        // Fallback: try origin/<branch>
+        const remoteBranchRaw = await safeExec(`git rev-parse origin/${branch}`)
+        const remoteBranchSha = remoteBranchRaw.stdout.trim()
+        if (remoteBranchSha && !remoteBranchRaw.stderr.includes('unknown revision')) {
+          latestSha = remoteBranchSha
+          const remoteMsgRaw = await safeExec(`git log -1 --pretty=format:%s origin/${branch}`)
+          latestMessage = remoteMsgRaw.stdout.trim()
+        }
+      }
+    }
+
+    const pkgPath = path.join(cwd(), 'package.json')
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as { version?: string }
 
     return Response.json({
@@ -37,13 +68,15 @@ export async function GET() {
       currentSha: currentSha.substring(0, 7),
       latestSha: latestSha.substring(0, 7),
       currentMessage: localMsgRaw.stdout.trim(),
-      latestMessage: remoteMsgRaw.stdout.trim(),
-      branch: branchRaw.stdout.trim(),
+      latestMessage,
+      branch,
       updateAvailable: currentSha !== latestSha,
+      fetchFailed,
     })
-  } catch {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
     return Response.json(
-      { error: 'Failed to check for updates. Ensure git is available on the server.' },
+      { error: `Failed to check for updates: ${msg}` },
       { status: 500 },
     )
   }
@@ -57,7 +90,7 @@ export async function POST() {
   }
 
   try {
-    const scriptPath = path.join(process.cwd(), 'update.sh')
+    const scriptPath = path.join(cwd(), 'update.sh')
 
     if (!fs.existsSync(scriptPath)) {
       return Response.json({ error: 'update.sh not found in project root' }, { status: 404 })
@@ -67,7 +100,8 @@ export async function POST() {
 
     const { stdout, stderr } = await execAsync(`bash "${scriptPath}"`, {
       timeout: 600_000, // 10 minutes
-      cwd: process.cwd(),
+      cwd: cwd(),
+      env: { ...process.env, FORCE_COLOR: '0' },
     })
 
     return Response.json({
@@ -76,12 +110,14 @@ export async function POST() {
       message: 'Update applied successfully. Restart the application to activate the new version.',
     })
   } catch (err: unknown) {
-    const e = err as { message?: string; stdout?: string; stderr?: string }
+    const e = err as { message?: string; stdout?: string; stderr?: string; code?: number }
+    // Even if the script exits non-zero, it may have partially succeeded
+    const output = (e.stdout ?? '') + (e.stderr ? '\nDetails:\n' + e.stderr : '')
     return Response.json(
       {
-        error: 'Update failed',
+        error: 'Update encountered issues',
         details: e.message,
-        output: (e.stdout ?? '') + (e.stderr ? '\nErrors:\n' + e.stderr : ''),
+        output: output || 'No output captured. Check server logs for details.',
       },
       { status: 500 },
     )

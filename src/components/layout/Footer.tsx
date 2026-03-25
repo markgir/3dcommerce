@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import { Printer, Github, Twitter, Mail } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
+import { useSiteSettings } from '@/lib/siteSettings'
 
 export default function Footer() {
   const { t } = useTranslation()
+  const { logoUrl } = useSiteSettings()
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-16">
@@ -13,8 +15,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl text-orange-400 mb-3">
-              <Printer className="w-6 h-6" />
-              <span>{t('common.appName')}</span>
+              {logoUrl ? (
+                <img src={logoUrl} alt={t('common.appName')} className="h-7 w-auto max-w-[160px] object-contain" />
+              ) : (
+                <>
+                  <Printer className="w-6 h-6" />
+                  <span>{t('common.appName')}</span>
+                </>
+              )}
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
               {t('footer.description')}
