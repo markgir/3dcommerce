@@ -5,9 +5,11 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Printer, Eye, EyeOff } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 export default function SignUpPage() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,7 +32,7 @@ export default function SignUpPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Registration failed')
+        setError(data.error || t('auth.registrationFailed'))
         setLoading(false)
         return
       }
@@ -40,7 +42,7 @@ export default function SignUpPage() {
       router.push('/')
       router.refresh()
     } catch {
-      setError('Something went wrong. Please try again.')
+      setError(t('auth.somethingWrong'))
       setLoading(false)
     }
   }
@@ -51,10 +53,10 @@ export default function SignUpPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 text-orange-500 font-bold text-xl mb-4">
             <Printer className="w-7 h-7" />
-            3D Print Hub
+            {t('common.appName')}
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create an account</h1>
-          <p className="text-gray-500 text-sm mt-1">Join the 3D printing community</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('auth.createAccount')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('auth.joinCommunity')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -65,31 +67,31 @@ export default function SignUpPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('auth.fullName')}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 text-sm"
-              placeholder="Your name"
+              placeholder={t('auth.namePlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('auth.email')}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 text-sm"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('auth.password')}</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -98,7 +100,7 @@ export default function SignUpPage() {
                 required
                 minLength={6}
                 className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 text-sm"
-                placeholder="At least 6 characters"
+                placeholder={t('auth.passwordMinLength')}
               />
               <button
                 type="button"
@@ -115,14 +117,14 @@ export default function SignUpPage() {
             disabled={loading}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? t('auth.creatingAccount') : t('auth.createAccountBtn')}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          Already have an account?{' '}
+          {t('auth.alreadyHaveAccount')}{' '}
           <Link href="/auth/signin" className="text-orange-500 hover:text-orange-600 font-medium">
-            Sign in
+            {t('auth.signInLink')}
           </Link>
         </p>
       </div>

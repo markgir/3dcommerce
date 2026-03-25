@@ -5,9 +5,11 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Printer, Eye, EyeOff } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 export default function SignInPage() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -28,7 +30,7 @@ export default function SignInPage() {
     setLoading(false)
 
     if (result?.error) {
-      setError('Invalid email or password')
+      setError(t('auth.invalidCredentials'))
     } else {
       router.push('/')
       router.refresh()
@@ -41,10 +43,10 @@ export default function SignInPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 text-orange-500 font-bold text-xl mb-4">
             <Printer className="w-7 h-7" />
-            3D Print Hub
+            {t('common.appName')}
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('auth.welcomeBack')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('auth.signInToAccount')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -55,19 +57,19 @@ export default function SignInPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('auth.email')}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 text-sm"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('auth.password')}</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -75,7 +77,7 @@ export default function SignInPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-400 text-sm"
-                placeholder="Your password"
+                placeholder={t('auth.passwordPlaceholder')}
               />
               <button
                 type="button"
@@ -92,14 +94,14 @@ export default function SignInPage() {
             disabled={loading}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? t('auth.signingIn') : t('auth.signIn')}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          Don&apos;t have an account?{' '}
+          {t('auth.noAccount')}{' '}
           <Link href="/auth/signup" className="text-orange-500 hover:text-orange-600 font-medium">
-            Sign up free
+            {t('auth.signUpFree')}
           </Link>
         </p>
       </div>

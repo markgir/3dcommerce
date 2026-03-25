@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import ModelCard from '@/components/models/ModelCard'
 import AdBanner from '@/components/ads/AdBanner'
 import { Search, Filter, SortAsc } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface Category {
   id: string
@@ -31,6 +32,7 @@ interface Model {
 export default function ExploreContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { t } = useTranslation()
 
   const [models, setModels] = useState<Model[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -100,12 +102,12 @@ export default function ExploreContent() {
             {/* Search */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                <Search className="w-4 h-4" /> Search
+                <Search className="w-4 h-4" /> {t('explore.search')}
               </label>
               <input
                 type="text"
                 defaultValue={search}
-                placeholder="Search models..."
+                placeholder={t('explore.searchPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -118,30 +120,30 @@ export default function ExploreContent() {
             {/* Sort */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                <SortAsc className="w-4 h-4" /> Sort By
+                <SortAsc className="w-4 h-4" /> {t('explore.sortBy')}
               </label>
               <select
                 value={sort}
                 onChange={(e) => updateFilter('sort', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
               >
-                <option value="newest">Newest First</option>
-                <option value="popular">Most Downloaded</option>
-                <option value="likes">Most Liked</option>
+                <option value="newest">{t('explore.newestFirst')}</option>
+                <option value="popular">{t('explore.mostDownloaded')}</option>
+                <option value="likes">{t('explore.mostLiked')}</option>
               </select>
             </div>
 
             {/* Category filter */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                <Filter className="w-4 h-4" /> Category
+                <Filter className="w-4 h-4" /> {t('explore.category')}
               </label>
               <div className="space-y-1">
                 <button
                   onClick={() => updateFilter('category', '')}
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${!category ? 'bg-orange-50 text-orange-600 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
-                  All Categories
+                  {t('explore.allCategories')}
                 </button>
                 {categories.map((cat) => (
                   <button
@@ -166,10 +168,10 @@ export default function ExploreContent() {
           {/* Active filters */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-500">{total.toLocaleString()} models</span>
+              <span className="text-sm text-gray-500">{total.toLocaleString()} {t('explore.models')}</span>
               {search && (
                 <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">
-                  Search: &quot;{search}&quot;
+                  {t('explore.search')}: &quot;{search}&quot;
                   <button onClick={() => updateFilter('search', '')} className="ml-1 text-orange-400 hover:text-orange-600">×</button>
                 </span>
               )}
@@ -181,7 +183,7 @@ export default function ExploreContent() {
               )}
               {featured && (
                 <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">
-                  Featured
+                  {t('explore.featured')}
                   <button onClick={() => updateFilter('featured', '')} className="ml-1 text-orange-400 hover:text-orange-600">×</button>
                 </span>
               )}
@@ -194,8 +196,8 @@ export default function ExploreContent() {
             </div>
           ) : models.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-gray-400 text-lg">No models found</p>
-              <p className="text-gray-300 text-sm mt-2">Try adjusting your filters</p>
+              <p className="text-gray-400 text-lg">{t('explore.noModelsFound')}</p>
+              <p className="text-gray-300 text-sm mt-2">{t('explore.tryAdjusting')}</p>
             </div>
           ) : (
             <>
@@ -212,7 +214,7 @@ export default function ExploreContent() {
                     disabled={loading}
                     className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-full transition-colors"
                   >
-                    {loading ? 'Loading...' : 'Load More'}
+                    {loading ? t('common.loading') : t('explore.loadMore')}
                   </button>
                 </div>
               )}

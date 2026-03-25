@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import AdBanner from '@/components/ads/AdBanner'
+import { useTranslation } from '@/lib/i18n'
 import {
   Download,
   Heart,
@@ -17,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Check,
 } from 'lucide-react'
 
 interface Comment {
@@ -58,6 +60,7 @@ interface Model {
 
 export default function ModelDetailClient({ model }: { model: Model }) {
   const { data: session } = useSession()
+  const { t } = useTranslation()
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [downloading, setDownloading] = useState(false)
   const [liked, setLiked] = useState(false)
@@ -67,8 +70,32 @@ export default function ModelDetailClient({ model }: { model: Model }) {
   const [submittingComment, setSubmittingComment] = useState(false)
   const [downloadFiles, setDownloadFiles] = useState<ModelFile[]>([])
   const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [shared, setShared] = useState(false)
 
   const tagList = model.tags ? model.tags.split(',').filter(Boolean) : []
+
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: model.title, url })
+      } else {
+        await navigator.clipboard.writeText(url)
+      }
+      setShared(true)
+      setTimeout(() => setShared(false), 2000)
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(url)
+          setShared(true)
+          setTimeout(() => setShared(false), 2000)
+        } catch {
+          // Ignore clipboard errors
+        }
+      }
+    }
+  }
 
   const handleLike = async () => {
     if (!session) {
@@ -119,7 +146,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <Link href="/explore" className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
-        <ArrowLeft className="w-4 h-4" /> Back to Explore
+        <ArrowLeft className="w-4 h-4" /> {t('model.backToExplore')}
       </Link>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -181,7 +208,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-orange-500" />
-              Comments ({comments.length})
+              {t('model.comments')} ({comments.length})
             </h3>
 
             {session ? (
@@ -189,7 +216,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Share your thoughts or ask a question..."
+                  placeholder={t('model.commentPlaceholder')}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 resize-none"
                   rows={3}
                 />
@@ -199,13 +226,13 @@ export default function ModelDetailClient({ model }: { model: Model }) {
                     disabled={submittingComment || !comment.trim()}
                     className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
                   >
-                    {submittingComment ? 'Posting...' : 'Post Comment'}
+                    {submittingComment ? t('model.posting') : t('model.postComment')}
                   </button>
                 </div>
               </form>
             ) : (
               <p className="text-sm text-gray-500 mb-4">
-                <Link href="/auth/signin" className="text-orange-500 hover:underline">Sign in</Link> to leave a comment
+                <Link href="/auth/signin" className="text-orange-500 hover:underline">{t('model.signInToComment')}</Link> {t('model.toLeaveComment')}
               </p>
             )}
 
@@ -229,7 +256,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
                 </div>
               ))}
               {comments.length === 0 && (
-                <p className="text-center text-gray-400 text-sm py-4">No comments yet. Be the first!</p>
+                <p className="text-center text-gray-400 text-sm py-4">{t('model.noCommentsYet')}</p>
               )}
             </div>
           </div>
@@ -266,21 +293,21 @@ export default function ModelDetailClient({ model }: { model: Model }) {
                   <Download className="w-4 h-4" />
                 </div>
                 <div className="text-sm font-semibold text-gray-900">{model.downloads.toLocaleString()}</div>
-                <div className="text-xs text-gray-400">Downloads</div>
+                <div className="text-xs text-gray-400">{t('model.downloads')}</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1 text-gray-500 mb-0.5">
                   <Heart className="w-4 h-4" />
                 </div>
                 <div className="text-sm font-semibold text-gray-900">{likesCount.toLocaleString()}</div>
-                <div className="text-xs text-gray-400">Likes</div>
+                <div className="text-xs text-gray-400">{t('model.likes')}</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1 text-gray-500 mb-0.5">
                   <Eye className="w-4 h-4" />
                 </div>
                 <div className="text-sm font-semibold text-gray-900">{model.views.toLocaleString()}</div>
-                <div className="text-xs text-gray-400">Views</div>
+                <div className="text-xs text-gray-400">{t('model.views')}</div>
               </div>
             </div>
 
@@ -292,7 +319,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
                 className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
               >
                 <Download className="w-4 h-4" />
-                {downloading ? 'Preparing...' : 'Download'}
+                {downloading ? t('model.preparing') : t('model.download')}
               </button>
               <button
                 onClick={handleLike}
@@ -301,16 +328,16 @@ export default function ModelDetailClient({ model }: { model: Model }) {
                 <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
               </button>
               <button
-                onClick={() => navigator.clipboard.writeText(window.location.href)}
-                className="p-3 rounded-xl border border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-colors"
+                onClick={handleShare}
+                className={`p-3 rounded-xl border transition-colors ${shared ? 'bg-green-50 border-green-200 text-green-500' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'}`}
               >
-                <Share2 className="w-5 h-5" />
+                {shared ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
               </button>
             </div>
 
             {/* Description */}
             <div className="mb-4">
-              <h3 className="font-semibold text-gray-900 text-sm mb-2">Description</h3>
+              <h3 className="font-semibold text-gray-900 text-sm mb-2">{t('model.description')}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{model.description}</p>
             </div>
 
@@ -318,7 +345,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
             {tagList.length > 0 && (
               <div className="mb-4">
                 <h3 className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-1">
-                  <Tag className="w-4 h-4" /> Tags
+                  <Tag className="w-4 h-4" /> {t('model.tags')}
                 </h3>
                 <div className="flex flex-wrap gap-1">
                   {tagList.map((tag) => (
@@ -337,16 +364,16 @@ export default function ModelDetailClient({ model }: { model: Model }) {
             {/* Details */}
             <div className="space-y-2 text-xs text-gray-500 border-t border-gray-100 pt-4">
               <div className="flex justify-between">
-                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Published</span>
+                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {t('model.published')}</span>
                 <span>{formatDate(model.createdAt)}</span>
               </div>
               <div className="flex justify-between">
-                <span>License</span>
+                <span>{t('model.license')}</span>
                 <span className="font-medium text-gray-700">{model.license}</span>
               </div>
               <div className="flex justify-between">
-                <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> Files</span>
-                <span>{model.files.length} file{model.files.length !== 1 ? 's' : ''}</span>
+                <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> {t('model.files')}</span>
+                <span>{model.files.length} {model.files.length !== 1 ? t('model.filesSuffix') : t('model.file')}</span>
               </div>
             </div>
 
@@ -370,7 +397,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
           >
             <h3 className="font-bold text-gray-900 text-lg mb-4 flex items-center gap-2">
               <Download className="w-5 h-5 text-orange-500" />
-              Download Files
+              {t('model.downloadFiles')}
             </h3>
             {downloadFiles.length > 0 ? (
               <div className="space-y-2">
@@ -393,7 +420,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm text-center py-4">No files available for download</p>
+              <p className="text-gray-500 text-sm text-center py-4">{t('model.noFilesAvailable')}</p>
             )}
             {/* Ad in download modal */}
             <div className="mt-4">
@@ -403,7 +430,7 @@ export default function ModelDetailClient({ model }: { model: Model }) {
               onClick={() => setShowDownloadModal(false)}
               className="w-full mt-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors"
             >
-              Close
+              {t('common.close')}
             </button>
           </div>
         </div>
