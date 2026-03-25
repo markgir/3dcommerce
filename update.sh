@@ -4,7 +4,9 @@
 # Fetches the latest code from GitHub while preserving all user data
 # =============================================================================
 
-set -e
+# Do NOT use set -e: we handle errors per-step so non-critical failures
+# do not abort the entire update.
+ERRORS=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="${SCRIPT_DIR}"
@@ -57,22 +59,51 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "⬇️  Pulling latest code from GitHub..."
 
-# Determine default branch (main or master)
-DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}')
+# Determine default branch – try multiple methods
+DEFAULT_BRANCH=""
+# Method 1: git symbolic-ref (fast, local only)
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+# Method 2: git remote show (requires network)
+if [ -z "$DEFAULT_BRANCH" ]; then
+  DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}')
+fi
+# Method 3: current branch
+if [ -z "$DEFAULT_BRANCH" ]; then
+  DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+fi
+# Fallback
 DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
 
-git fetch origin
-git reset --hard "origin/${DEFAULT_BRANCH}"
+echo "  Branch: $DEFAULT_BRANCH"
 
-echo "  ✓ Code updated to latest commit: $(git rev-parse --short HEAD)"
+if git fetch origin 2>&1; then
+  echo "  ✓ Fetched latest from remote"
+else
+  echo "  ⚠ Could not fetch from remote (network issue or remote not configured)"
+  echo "  Continuing with local code..."
+  ERRORS=$((ERRORS + 1))
+fi
+
+if git reset --hard "origin/${DEFAULT_BRANCH}" 2>&1; then
+  echo "  ✓ Code updated to latest commit: $(git rev-parse --short HEAD)"
+else
+  echo "  ⚠ Could not reset to origin/${DEFAULT_BRANCH}"
+  echo "  Continuing with current code..."
+  ERRORS=$((ERRORS + 1))
+fi
+
 echo ""
 
 # ---------------------------------------------------------------------------
 # 3. Install / update dependencies
 # ---------------------------------------------------------------------------
 echo "📦 Installing dependencies..."
-npm install
-echo "  ✓ Dependencies installed"
+if npm install 2>&1; then
+  echo "  ✓ Dependencies installed"
+else
+  echo "  ⚠ npm install had issues, continuing..."
+  ERRORS=$((ERRORS + 1))
+fi
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -87,11 +118,17 @@ echo "  ✓ Upload directories verified"
 # 5. Apply pending database migrations (safe – never deletes data)
 # ---------------------------------------------------------------------------
 echo "🗄️  Applying database migrations..."
-npx prisma generate && echo "  ✓ Prisma client generated"
+if npx prisma generate 2>&1; then
+  echo "  ✓ Prisma client generated"
+else
+  echo "  ⚠ Prisma generate had issues"
+  ERRORS=$((ERRORS + 1))
+fi
+
 if npx prisma migrate deploy 2>&1 | tail -5; then
   echo "  ✓ Migrations applied"
 else
-  echo "  ℹ  No pending migrations"
+  echo "  ℹ  No pending migrations or migration issue"
 fi
 echo ""
 
@@ -99,8 +136,13 @@ echo ""
 # 6. Build the application
 # ---------------------------------------------------------------------------
 echo "🏗️  Building the application..."
-npm run build
-echo "  ✓ Build complete"
+if npm run build 2>&1; then
+  echo "  ✓ Build complete"
+else
+  echo "  ⚠ Build failed – the application may need a manual rebuild"
+  echo "    Try running: npm run build"
+  ERRORS=$((ERRORS + 1))
+fi
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -119,13 +161,19 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "============================================================="
-echo "  ✅  UPDATE COMPLETE!"
+if [ "$ERRORS" -eq 0 ]; then
+  echo "  ✅  UPDATE COMPLETE!"
+else
+  echo "  ⚠️  UPDATE COMPLETED WITH $ERRORS WARNING(S)"
+fi
 echo "============================================================="
 echo ""
 echo "  Your data has been preserved:"
 echo "    • .env / .env.local – not modified by git"
 echo "    • Database files    – not modified by git"
 echo "    • Uploaded files    – not modified by git"
+echo "    • Site settings     – stored in database (preserved)"
+echo "    • Custom logo       – stored in uploads (preserved)"
 echo ""
 echo "  Backup saved at:"
 echo "    $BACKUP_DIR"

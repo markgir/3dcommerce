@@ -6,10 +6,12 @@ import { useState } from 'react'
 import { Search, Upload, User, Menu, X, Printer, LogOut, Settings, Globe } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useTranslation, type Locale } from '@/lib/i18n'
+import { useSiteSettings } from '@/lib/siteSettings'
 
 export default function Navbar() {
   const { data: session } = useSession()
   const { t, locale, setLocale } = useTranslation()
+  const { logoUrl } = useSiteSettings()
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -34,8 +36,14 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 font-bold text-xl text-orange-400">
-            <Printer className="w-7 h-7" />
-            <span>{t('common.appName')}</span>
+            {logoUrl ? (
+              <img src={logoUrl} alt={t('common.appName')} className="h-8 w-auto max-w-[160px] object-contain" />
+            ) : (
+              <>
+                <Printer className="w-7 h-7" />
+                <span>{t('common.appName')}</span>
+              </>
+            )}
           </Link>
 
           {/* Search - desktop */}

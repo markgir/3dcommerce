@@ -187,6 +187,24 @@ const pt = {
   'lang.language': 'Idioma',
   'lang.pt': 'Português',
   'lang.en': 'English',
+
+  // Settings
+  'admin.settings': 'Definições',
+  'admin.settingsLogo': 'Logótipo do Site',
+  'admin.settingsLogoDesc': 'Carregue um logótipo personalizado para substituir o ícone predefinido na barra de navegação e rodapé.',
+  'admin.settingsLogoUpload': 'Carregar Logótipo',
+  'admin.settingsLogoRemove': 'Remover Logótipo',
+  'admin.settingsLogoCurrent': 'Logótipo atual',
+  'admin.settingsLogoNone': 'Nenhum logótipo personalizado definido. A usar o ícone predefinido.',
+  'admin.settingsLogoHint': 'Formatos: PNG, JPG, SVG, WebP. Máximo 2MB.',
+  'admin.settingsLogoSaved': 'Logótipo atualizado com sucesso',
+  'admin.settingsLogoRemoved': 'Logótipo removido com sucesso',
+  'admin.settingsDataInfo': 'Informação sobre Dados',
+  'admin.settingsDataInfoDesc': 'As seguintes informações são preservadas durante as atualizações:',
+  'admin.settingsDataItem1': 'Base de dados (utilizadores, modelos, comentários, gostos)',
+  'admin.settingsDataItem2': 'Ficheiros carregados (imagens, modelos 3D)',
+  'admin.settingsDataItem3': 'Ficheiros de configuração (.env)',
+  'admin.settingsDataItem4': 'Definições do site (logótipo, traduções personalizadas)',
 } as const
 
 export default pt
