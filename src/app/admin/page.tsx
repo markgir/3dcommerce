@@ -153,9 +153,12 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin')
+      return
+    }
     if (status === 'authenticated') {
       if (session?.user?.role !== 'ADMIN') {
-        router.push('/')
         return
       }
       loadStats()
@@ -329,7 +332,18 @@ export default function AdminPage() {
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
         <p className="text-gray-500 mb-4">You need admin privileges to access this page.</p>
-        <Link href="/" className="text-orange-500 hover:underline">Go Home</Link>
+        <div className="bg-gray-100 rounded-xl p-6 text-left text-sm text-gray-700 mb-6">
+          <p className="font-semibold mb-2">How to get admin access:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>If you ran the seed script, sign in with <strong>admin@3dprinthub.com</strong> / <strong>admin123456</strong></li>
+            <li>The very first user to register on a fresh database automatically becomes admin</li>
+            <li>An existing admin can promote your account from the admin dashboard</li>
+          </ul>
+        </div>
+        <div className="flex gap-4 justify-center">
+          <Link href="/auth/signin" className="text-orange-500 hover:underline">Sign In</Link>
+          <Link href="/" className="text-gray-500 hover:underline">Go Home</Link>
+        </div>
       </div>
     )
   }
