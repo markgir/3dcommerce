@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Upload, X, Plus, FileText } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from '@/lib/i18n'
 
 interface Category {
   id: string
@@ -16,6 +17,7 @@ interface Category {
 export default function UploadPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { t } = useTranslation()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [title, setTitle] = useState('')
@@ -46,10 +48,10 @@ export default function UploadPage() {
   if (!session) {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign in to Upload</h2>
-        <p className="text-gray-500 mb-6">You need to be signed in to upload 3D models</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('upload.signInRequired')}</h2>
+        <p className="text-gray-500 mb-6">{t('upload.signInMessage')}</p>
         <Link href="/auth/signin" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-full transition-colors">
-          Sign In
+          {t('nav.signIn')}
         </Link>
       </div>
     )
@@ -81,7 +83,7 @@ export default function UploadPage() {
     setError('')
 
     if (!categoryId) {
-      setError('Please select a category')
+      setError(t('upload.selectCategoryError'))
       return
     }
 
@@ -101,14 +103,14 @@ export default function UploadPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Upload failed')
+        setError(data.error || t('upload.failed'))
         setLoading(false)
         return
       }
 
       router.push(`/models/${data.id}`)
     } catch {
-      setError('Something went wrong')
+      setError(t('upload.somethingWrong'))
       setLoading(false)
     }
   }
@@ -117,8 +119,8 @@ export default function UploadPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload 3D Model</h1>
-      <p className="text-gray-500 mb-8">Share your design with the 3D printing community</p>
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('upload.title')}</h1>
+      <p className="text-gray-500 mb-8">{t('upload.subtitle')}</p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
@@ -129,12 +131,12 @@ export default function UploadPage() {
 
         {/* Basic Info */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="font-semibold text-gray-900 mb-4">Basic Information</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">{t('upload.basicInfo')}</h2>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title <span className="text-red-500">*</span>
+                {t('upload.modelTitle')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -143,13 +145,13 @@ export default function UploadPage() {
                 required
                 maxLength={100}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-400"
-                placeholder="Give your model a descriptive name"
+                placeholder={t('upload.modelTitlePlaceholder')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description <span className="text-red-500">*</span>
+                {t('upload.descriptionLabel')} <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={description}
@@ -157,14 +159,14 @@ export default function UploadPage() {
                 required
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 resize-none"
-                placeholder="Describe your model, printing tips, use cases..."
+                placeholder={t('upload.descriptionPlaceholder')}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category <span className="text-red-500">*</span>
+                  {t('upload.categoryLabel')} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={categoryId}
@@ -172,7 +174,7 @@ export default function UploadPage() {
                   required
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-400"
                 >
-                  <option value="">Select category</option>
+                  <option value="">{t('upload.selectCategory')}</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.icon} {cat.name}
@@ -182,7 +184,7 @@ export default function UploadPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">License</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('upload.licenseLabel')}</label>
                 <select
                   value={license}
                   onChange={(e) => setLicense(e.target.value)}
@@ -196,13 +198,13 @@ export default function UploadPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('upload.tagsLabel')}</label>
               <input
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-orange-400"
-                placeholder="tag1, tag2, tag3 (comma separated)"
+                placeholder={t('upload.tagsPlaceholder')}
               />
             </div>
           </div>
@@ -210,8 +212,8 @@ export default function UploadPage() {
 
         {/* Images */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="font-semibold text-gray-900 mb-4">Photos</h2>
-          <p className="text-sm text-gray-500 mb-4">Upload photos of your print. First image will be the main photo.</p>
+          <h2 className="font-semibold text-gray-900 mb-4">{t('upload.photos')}</h2>
+          <p className="text-sm text-gray-500 mb-4">{t('upload.photosDesc')}</p>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
             {imagePreviews.map((preview, idx) => (
@@ -226,7 +228,7 @@ export default function UploadPage() {
                 </button>
                 {idx === 0 && (
                   <div className="absolute bottom-1 left-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded">
-                    Main
+                    {t('upload.main')}
                   </div>
                 )}
               </div>
@@ -234,7 +236,7 @@ export default function UploadPage() {
 
             <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 hover:border-orange-400 cursor-pointer flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-orange-500 transition-colors">
               <Plus className="w-6 h-6" />
-              <span className="text-xs">Add Photo</span>
+              <span className="text-xs">{t('upload.addPhoto')}</span>
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
             </label>
           </div>
@@ -242,8 +244,8 @@ export default function UploadPage() {
 
         {/* Files */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="font-semibold text-gray-900 mb-4">3D Files</h2>
-          <p className="text-sm text-gray-500 mb-4">Upload your STL, OBJ, 3MF, or other print files.</p>
+          <h2 className="font-semibold text-gray-900 mb-4">{t('upload.3dFiles')}</h2>
+          <p className="text-sm text-gray-500 mb-4">{t('upload.3dFilesDesc')}</p>
 
           <div className="space-y-2 mb-3">
             {files.map((file, idx) => (
@@ -269,8 +271,8 @@ export default function UploadPage() {
           <label className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 hover:border-orange-400 rounded-xl cursor-pointer text-gray-500 hover:text-orange-500 transition-colors">
             <Upload className="w-5 h-5" />
             <div>
-              <span className="font-medium text-sm">Click to add files</span>
-              <p className="text-xs text-gray-400">STL, OBJ, 3MF, STEP, etc.</p>
+              <span className="font-medium text-sm">{t('upload.clickToAddFiles')}</span>
+              <p className="text-xs text-gray-400">{t('upload.fileTypes')}</p>
             </div>
             <input
               type="file"
@@ -287,7 +289,7 @@ export default function UploadPage() {
           disabled={loading}
           className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-4 rounded-xl transition-colors text-lg"
         >
-          {loading ? 'Uploading...' : 'Publish Model'}
+          {loading ? t('upload.uploading') : t('upload.publishModel')}
         </button>
       </form>
     </div>
