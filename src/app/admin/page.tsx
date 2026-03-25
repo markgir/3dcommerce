@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { defaultTranslations, useTranslation, type Locale } from '@/lib/i18n'
 import {
   LayoutDashboard,
   Package,
@@ -20,9 +21,10 @@ import {
   Database,
   RefreshCw,
   Bug,
+  Languages,
 } from 'lucide-react'
 
-type Tab = 'overview' | 'models' | 'users' | 'ads' | 'update' | 'debug'
+type Tab = 'overview' | 'models' | 'users' | 'ads' | 'translations' | 'update' | 'debug'
 
 interface UpdateInfo {
   currentVersion: string
@@ -119,6 +121,88 @@ export default function AdminPage() {
     isActive: true,
   })
 
+  // Translations state
+  const { t, refreshOverrides } = useTranslation()
+  const [translationLocale, setTranslationLocale] = useState<Locale>('pt')
+  const [translationSearch, setTranslationSearch] = useState('')
+  const [translationFilter, setTranslationFilter] = useState<'all' | 'modified'>('all')
+  const [translationOverrides, setTranslationOverrides] = useState<Record<string, Record<string, string>>>({})
+  const [editingTranslations, setEditingTranslations] = useState<Record<string, string>>({})
+  const [savingKey, setSavingKey] = useState<string | null>(null)
+  const [translationMessage, setTranslationMessage] = useState('')
+
+  const loadTranslationOverrides = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/translations')
+      if (res.ok) {
+        const data = await res.json()
+        const grouped: Record<string, Record<string, string>> = {}
+        for (const item of data) {
+          if (!grouped[item.locale]) grouped[item.locale] = {}
+          grouped[item.locale][item.key] = item.value
+        }
+        setTranslationOverrides(grouped)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const saveTranslation = async (key: string) => {
+    const value = editingTranslations[key]
+    if (value === undefined) return
+    setSavingKey(key)
+    try {
+      const res = await fetch('/api/admin/translations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: translationLocale, key, value }),
+      })
+      if (res.ok) {
+        setTranslationOverrides((prev) => ({
+          ...prev,
+          [translationLocale]: { ...prev[translationLocale], [key]: value },
+        }))
+        setEditingTranslations((prev) => {
+          const next = { ...prev }
+          delete next[key]
+          return next
+        })
+        setTranslationMessage(t('admin.translationSaved' as Parameters<typeof t>[0]))
+        refreshOverrides()
+        setTimeout(() => setTranslationMessage(''), 3000)
+      }
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
+  const resetTranslation = async (key: string) => {
+    setSavingKey(key)
+    try {
+      const res = await fetch(`/api/admin/translations?locale=${translationLocale}&key=${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setTranslationOverrides((prev) => {
+          const localeOverrides = { ...prev[translationLocale] }
+          delete localeOverrides[key]
+          return { ...prev, [translationLocale]: localeOverrides }
+        })
+        setEditingTranslations((prev) => {
+          const next = { ...prev }
+          delete next[key]
+          return next
+        })
+        setTranslationMessage(t('admin.translationResetSuccess' as Parameters<typeof t>[0]))
+        refreshOverrides()
+        setTimeout(() => setTranslationMessage(''), 3000)
+      }
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
   interface ModelItem {
     id: string
     title: string
@@ -213,6 +297,8 @@ export default function AdminPage() {
         const data = await res.json()
         if (data.error) setDebugError(data.error)
         else setDebugInfo(data)
+      } else if (tab === 'translations') {
+        await loadTranslationOverrides()
       }
     } finally {
       setLoading(false)
@@ -387,12 +473,13 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit flex-wrap">
         {([
           { id: 'overview', label: 'Overview', icon: LayoutDashboard },
           { id: 'models', label: 'Models', icon: Package },
           { id: 'users', label: 'Users', icon: Users },
           { id: 'ads', label: 'Ads', icon: Megaphone },
+          { id: 'translations', label: t('admin.translations' as Parameters<typeof t>[0]), icon: Languages },
           { id: 'update', label: 'Update', icon: RefreshCw },
           { id: 'debug', label: 'Debug', icon: Bug },
         ] as { id: Tab; label: string; icon: React.ElementType }[]).map((tab) => (
@@ -691,6 +778,138 @@ export default function AdminPage() {
                 {ads.length === 0 && (
                   <div className="text-center py-8 text-gray-400 text-sm">No ads created yet</div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Translations */}
+          {activeTab === 'translations' && (
+            <div className="max-w-5xl space-y-4">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 className="font-semibold text-gray-900 mb-1">{t('admin.translations' as Parameters<typeof t>[0])}</h3>
+                <p className="text-sm text-gray-500 mb-4">{t('admin.translationsDescription' as Parameters<typeof t>[0])}</p>
+
+                {translationMessage && (
+                  <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                    {translationMessage}
+                  </div>
+                )}
+
+                {/* Controls */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                  <input
+                    type="text"
+                    value={translationSearch}
+                    onChange={(e) => setTranslationSearch(e.target.value)}
+                    placeholder={t('admin.translationSearch' as Parameters<typeof t>[0])}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
+                  />
+                  <select
+                    value={translationLocale}
+                    onChange={(e) => {
+                      setTranslationLocale(e.target.value as Locale)
+                      setEditingTranslations({})
+                    }}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
+                  >
+                    <option value="pt">🇵🇹 Português</option>
+                    <option value="en">🇬🇧 English</option>
+                  </select>
+                  <select
+                    value={translationFilter}
+                    onChange={(e) => setTranslationFilter(e.target.value as 'all' | 'modified')}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-400"
+                  >
+                    <option value="all">{t('admin.translationAll' as Parameters<typeof t>[0])}</option>
+                    <option value="modified">{t('admin.translationModified' as Parameters<typeof t>[0])}</option>
+                  </select>
+                </div>
+
+                {/* Translations table */}
+                <div className="border border-gray-100 rounded-xl overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-1/4">{t('admin.translationKey' as Parameters<typeof t>[0])}</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-1/3">{t('admin.translationDefault' as Parameters<typeof t>[0])}</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-1/3">{t('admin.translationCustom' as Parameters<typeof t>[0])}</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-32">{t('admin.translationActions' as Parameters<typeof t>[0])}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {(() => {
+                        const allKeys = Object.keys(defaultTranslations[translationLocale] || {})
+                        const filtered = allKeys.filter((key) => {
+                          const defaultValue = defaultTranslations[translationLocale]?.[key] || ''
+                          const override = translationOverrides[translationLocale]?.[key]
+                          const matchesSearch = !translationSearch ||
+                            key.toLowerCase().includes(translationSearch.toLowerCase()) ||
+                            defaultValue.toLowerCase().includes(translationSearch.toLowerCase()) ||
+                            (override && override.toLowerCase().includes(translationSearch.toLowerCase()))
+                          const matchesFilter = translationFilter === 'all' || override !== undefined
+                          return matchesSearch && matchesFilter
+                        })
+
+                        if (filtered.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={4} className="text-center py-8 text-gray-400 text-sm">
+                                {t('admin.translationNoResults' as Parameters<typeof t>[0])}
+                              </td>
+                            </tr>
+                          )
+                        }
+
+                        return filtered.map((key) => {
+                          const defaultValue = defaultTranslations[translationLocale]?.[key] || ''
+                          const override = translationOverrides[translationLocale]?.[key]
+                          const editValue = editingTranslations[key]
+                          const isEditing = editValue !== undefined
+                          const hasOverride = override !== undefined
+
+                          return (
+                            <tr key={key} className="hover:bg-gray-50">
+                              <td className="px-4 py-3">
+                                <code className="text-xs bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded font-mono break-all">{key}</code>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 break-words">{defaultValue}</td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="text"
+                                  value={isEditing ? editValue : (override ?? defaultValue)}
+                                  onChange={(e) => setEditingTranslations((prev) => ({ ...prev, [key]: e.target.value }))}
+                                  className={`w-full px-2 py-1.5 border rounded-lg text-sm focus:outline-none focus:border-orange-400 ${hasOverride && !isEditing ? 'border-orange-200 bg-orange-50' : 'border-gray-200'}`}
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center justify-end gap-1">
+                                  {isEditing && (
+                                    <button
+                                      onClick={() => saveTranslation(key)}
+                                      disabled={savingKey === key}
+                                      className="text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors"
+                                    >
+                                      {savingKey === key ? '...' : t('admin.translationSave' as Parameters<typeof t>[0])}
+                                    </button>
+                                  )}
+                                  {hasOverride && !isEditing && (
+                                    <button
+                                      onClick={() => resetTranslation(key)}
+                                      disabled={savingKey === key}
+                                      className="text-xs text-gray-500 hover:text-red-500 px-2 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 transition-colors"
+                                    >
+                                      {t('admin.translationReset' as Parameters<typeof t>[0])}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
