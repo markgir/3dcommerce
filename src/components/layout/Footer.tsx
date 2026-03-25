@@ -1,7 +1,12 @@
+'use client'
+
 import Link from 'next/link'
 import { Printer, Github, Twitter, Mail } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 export default function Footer() {
+  const { t } = useTranslation()
+
   return (
     <footer className="bg-gray-900 text-gray-300 mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -9,10 +14,10 @@ export default function Footer() {
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl text-orange-400 mb-3">
               <Printer className="w-6 h-6" />
-              <span>3D Print Hub</span>
+              <span>{t('common.appName')}</span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
-              The platform for sharing free 3D printing models. Upload, discover, and download designs for your 3D printer.
+              {t('footer.description')}
             </p>
             <div className="flex gap-3 mt-4">
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
@@ -28,41 +33,41 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-white mb-4">Explore</h3>
+            <h3 className="font-semibold text-white mb-4">{t('footer.explore')}</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/explore" className="hover:text-white transition-colors">All Models</Link></li>
-              <li><Link href="/explore?featured=true" className="hover:text-white transition-colors">Featured</Link></li>
-              <li><Link href="/explore?sort=popular" className="hover:text-white transition-colors">Most Downloaded</Link></li>
-              <li><Link href="/explore?sort=likes" className="hover:text-white transition-colors">Most Liked</Link></li>
+              <li><Link href="/explore" className="hover:text-white transition-colors">{t('footer.allModels')}</Link></li>
+              <li><Link href="/explore?featured=true" className="hover:text-white transition-colors">{t('footer.featured')}</Link></li>
+              <li><Link href="/explore?sort=popular" className="hover:text-white transition-colors">{t('footer.mostDownloaded')}</Link></li>
+              <li><Link href="/explore?sort=likes" className="hover:text-white transition-colors">{t('footer.mostLiked')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold text-white mb-4">Community</h3>
+            <h3 className="font-semibold text-white mb-4">{t('footer.community')}</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/auth/signup" className="hover:text-white transition-colors">Join Us</Link></li>
-              <li><Link href="/upload" className="hover:text-white transition-colors">Upload a Model</Link></li>
-              <li><Link href="/profile" className="hover:text-white transition-colors">My Profile</Link></li>
+              <li><Link href="/auth/signup" className="hover:text-white transition-colors">{t('footer.joinUs')}</Link></li>
+              <li><Link href="/upload" className="hover:text-white transition-colors">{t('footer.uploadAModel')}</Link></li>
+              <li><Link href="/profile" className="hover:text-white transition-colors">{t('footer.myProfile')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold text-white mb-4">About</h3>
+            <h3 className="font-semibold text-white mb-4">{t('footer.about')}</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">{t('footer.aboutUs')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">{t('footer.terms')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">{t('footer.privacy')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">{t('footer.contact')}</a></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-500">
-            © 2024 3D Print Hub. All models are free to download.
+            {t('footer.copyright')}
           </p>
           <p className="text-sm text-gray-500">
-            Made with ❤️ for the 3D printing community
+            {t('footer.madeWith')}
           </p>
         </div>
       </div>

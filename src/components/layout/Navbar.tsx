@@ -3,14 +3,17 @@
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Search, Upload, User, Menu, X, Printer, LogOut, Settings } from 'lucide-react'
+import { Search, Upload, User, Menu, X, Printer, LogOut, Settings, Globe } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useTranslation, type Locale } from '@/lib/i18n'
 
 export default function Navbar() {
   const { data: session } = useSession()
+  const { t, locale, setLocale } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [langMenuOpen, setLangMenuOpen] = useState(false)
   const router = useRouter()
 
   const handleSearch = (e: React.FormEvent) => {
@@ -20,6 +23,11 @@ export default function Navbar() {
     }
   }
 
+  const handleLocaleChange = (newLocale: Locale) => {
+    setLocale(newLocale)
+    setLangMenuOpen(false)
+  }
+
   return (
     <nav className="bg-gray-900 text-white sticky top-0 z-50 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,7 +35,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 font-bold text-xl text-orange-400">
             <Printer className="w-7 h-7" />
-            <span>3D Print Hub</span>
+            <span>{t('common.appName')}</span>
           </Link>
 
           {/* Search - desktop */}
@@ -38,7 +46,7 @@ export default function Navbar() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search 3D models..."
+                placeholder={t('nav.searchPlaceholder')}
                 className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 text-sm"
               />
             </div>
@@ -47,7 +55,7 @@ export default function Navbar() {
           {/* Nav links - desktop */}
           <div className="hidden md:flex items-center gap-4">
             <Link href="/explore" className="text-gray-300 hover:text-white text-sm font-medium">
-              Explore
+              {t('nav.explore')}
             </Link>
             {session ? (
               <>
@@ -56,7 +64,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-full transition-colors"
                 >
                   <Upload className="w-4 h-4" />
-                  Upload
+                  {t('nav.upload')}
                 </Link>
                 <div className="relative">
                   <button
@@ -79,7 +87,7 @@ export default function Navbar() {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <User className="w-4 h-4" />
-                        My Profile
+                        {t('nav.myProfile')}
                       </Link>
                       {session.user.role === 'ADMIN' && (
                         <Link
@@ -88,7 +96,7 @@ export default function Navbar() {
                           onClick={() => setUserMenuOpen(false)}
                         >
                           <Settings className="w-4 h-4" />
-                          Admin Panel
+                          {t('nav.adminPanel')}
                         </Link>
                       )}
                       <button
@@ -96,7 +104,7 @@ export default function Navbar() {
                         className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700"
                       >
                         <LogOut className="w-4 h-4" />
-                        Sign Out
+                        {t('nav.signOut')}
                       </button>
                     </div>
                   )}
@@ -108,16 +116,42 @@ export default function Navbar() {
                   href="/auth/signin"
                   className="text-gray-300 hover:text-white text-sm font-medium"
                 >
-                  Sign In
+                  {t('nav.signIn')}
                 </Link>
                 <Link
                   href="/auth/signup"
                   className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-full transition-colors"
                 >
-                  Sign Up
+                  {t('nav.signUp')}
                 </Link>
               </div>
             )}
+            {/* Language Switcher */}
+            <div className="relative">
+              <button
+                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                className="flex items-center gap-1 text-gray-300 hover:text-white text-sm"
+              >
+                <Globe className="w-4 h-4" />
+                <span className="uppercase">{locale}</span>
+              </button>
+              {langMenuOpen && (
+                <div className="absolute right-0 mt-2 w-36 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1">
+                  <button
+                    onClick={() => handleLocaleChange('pt')}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 ${locale === 'pt' ? 'text-orange-400 font-medium' : 'text-gray-300 hover:text-white'}`}
+                  >
+                    {t('lang.pt')}
+                  </button>
+                  <button
+                    onClick={() => handleLocaleChange('en')}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 ${locale === 'en' ? 'text-orange-400 font-medium' : 'text-gray-300 hover:text-white'}`}
+                  >
+                    {t('lang.en')}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -139,30 +173,47 @@ export default function Navbar() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search 3D models..."
+                  placeholder={t('nav.searchPlaceholder')}
                   className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 text-sm"
                 />
               </div>
             </form>
             <div className="flex flex-col gap-2">
-              <Link href="/explore" className="text-gray-300 hover:text-white py-2">Explore</Link>
+              <Link href="/explore" className="text-gray-300 hover:text-white py-2">{t('nav.explore')}</Link>
               {session ? (
                 <>
-                  <Link href="/upload" className="text-gray-300 hover:text-white py-2">Upload Model</Link>
-                  <Link href="/profile" className="text-gray-300 hover:text-white py-2">My Profile</Link>
+                  <Link href="/upload" className="text-gray-300 hover:text-white py-2">{t('nav.uploadModel')}</Link>
+                  <Link href="/profile" className="text-gray-300 hover:text-white py-2">{t('nav.myProfile')}</Link>
                   {session.user.role === 'ADMIN' && (
-                    <Link href="/admin" className="text-gray-300 hover:text-white py-2">Admin Panel</Link>
+                    <Link href="/admin" className="text-gray-300 hover:text-white py-2">{t('nav.adminPanel')}</Link>
                   )}
                   <button onClick={() => signOut()} className="text-left text-gray-300 hover:text-white py-2">
-                    Sign Out
+                    {t('nav.signOut')}
                   </button>
                 </>
               ) : (
                 <>
-                  <Link href="/auth/signin" className="text-gray-300 hover:text-white py-2">Sign In</Link>
-                  <Link href="/auth/signup" className="text-gray-300 hover:text-white py-2">Sign Up</Link>
+                  <Link href="/auth/signin" className="text-gray-300 hover:text-white py-2">{t('nav.signIn')}</Link>
+                  <Link href="/auth/signup" className="text-gray-300 hover:text-white py-2">{t('nav.signUp')}</Link>
                 </>
               )}
+              {/* Mobile language switcher */}
+              <div className="border-t border-gray-700 pt-2 mt-2 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-gray-400" />
+                <button
+                  onClick={() => handleLocaleChange('pt')}
+                  className={`text-sm ${locale === 'pt' ? 'text-orange-400 font-medium' : 'text-gray-300'}`}
+                >
+                  PT
+                </button>
+                <span className="text-gray-600">|</span>
+                <button
+                  onClick={() => handleLocaleChange('en')}
+                  className={`text-sm ${locale === 'en' ? 'text-orange-400 font-medium' : 'text-gray-300'}`}
+                >
+                  EN
+                </button>
+              </div>
             </div>
           </div>
         )}
