@@ -17,10 +17,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  models        Model3D[]
-  downloads     Download[]
-  likes         Like[]
-  comments      Comment[]
+  models          Model3D[]
+  downloads       Download[]
+  likes           Like[]
+  comments        Comment[]
+  vendorProducts  VendorProduct[]
+  vendorOrders    VendorOrder[]
 }
 
 model Category {
@@ -129,4 +131,38 @@ model SiteSetting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model VendorProduct {
+  id          String   @id @default(cuid())
+  vendorId    String
+  name        String
+  description String
+  price       Float
+  imageUrl    String?
+  linkUrl     String?
+  productType String   @default("FILAMENT")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendor User          @relation(fields: [vendorId], references: [id])
+  orders VendorOrder[]
+}
+
+model VendorOrder {
+  id              String   @id @default(cuid())
+  productId       String
+  buyerId         String
+  quantity        Int      @default(1)
+  unitPrice       Float
+  totalPrice      Float
+  commission      Float
+  commissionRate  Float    @default(0.10)
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product VendorProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyer   User          @relation(fields: [buyerId], references: [id])
 }

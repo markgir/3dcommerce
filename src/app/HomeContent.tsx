@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import ModelCard from '@/components/models/ModelCard'
 import AdBanner from '@/components/ads/AdBanner'
+import VendorProductsSection from '@/components/vendor/VendorProductsSection'
 import { Search, Download, Users, Star, ArrowRight } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 
@@ -157,6 +158,9 @@ export default function HomeContent({
         <AdBanner placement="inline" />
       </div>
 
+      {/* Vendor Products - above Most Downloaded */}
+      <VendorProductsSection limit={4} />
+
       {/* Popular Models */}
       {popularModels.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -203,6 +207,9 @@ export default function HomeContent({
           </Link>
         </div>
       </section>
+
+      {/* Vendor Products - above footer */}
+      <VendorProductsSection limit={4} />
 
       {/* Footer Ad */}
       <div className="max-w-7xl mx-auto px-4 py-6">

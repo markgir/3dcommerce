@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Search, Upload, User, Menu, X, Printer, LogOut, Settings, Globe } from 'lucide-react'
+import { Search, Upload, User, Menu, X, Printer, LogOut, Settings, Globe, ShoppingBag } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useTranslation, type Locale } from '@/lib/i18n'
 import { useSiteSettings } from '@/lib/siteSettings'
@@ -107,6 +107,16 @@ export default function Navbar() {
                           {t('nav.adminPanel')}
                         </Link>
                       )}
+                      {session.user.role === 'VENDOR' && (
+                        <Link
+                          href="/vendor"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          {t('vendor.dashboardLink')}
+                        </Link>
+                      )}
                       <button
                         onClick={() => signOut()}
                         className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700"
@@ -194,6 +204,9 @@ export default function Navbar() {
                   <Link href="/profile" className="text-gray-300 hover:text-white py-2">{t('nav.myProfile')}</Link>
                   {session.user.role === 'ADMIN' && (
                     <Link href="/admin" className="text-gray-300 hover:text-white py-2">{t('nav.adminPanel')}</Link>
+                  )}
+                  {session.user.role === 'VENDOR' && (
+                    <Link href="/vendor" className="text-gray-300 hover:text-white py-2">{t('vendor.dashboardLink')}</Link>
                   )}
                   <button onClick={() => signOut()} className="text-left text-gray-300 hover:text-white py-2">
                     {t('nav.signOut')}
