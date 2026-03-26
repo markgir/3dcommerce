@@ -163,7 +163,7 @@ export default function VendorPage() {
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
         <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('vendor.title')}</h1>
-        <p className="text-gray-500">You need a vendor account to access this page.</p>
+        <p className="text-gray-500">{t('vendor.accessDenied')}</p>
       </div>
     )
   }

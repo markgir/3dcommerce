@@ -256,6 +256,7 @@ const en = {
   'vendor.buySuccess': 'Purchase completed successfully!',
   'vendor.buyError': 'Error processing purchase',
   'vendor.signInToBuy': 'Sign in to buy',
+  'vendor.accessDenied': 'You need a vendor account to access this page.',
 } as const
 
 export default en

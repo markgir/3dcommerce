@@ -256,6 +256,7 @@ const pt = {
   'vendor.buySuccess': 'Compra realizada com sucesso!',
   'vendor.buyError': 'Erro ao processar a compra',
   'vendor.signInToBuy': 'Entre para comprar',
+  'vendor.accessDenied': 'Precisa de uma conta de vendedor para aceder a esta página.',
 } as const
 
 export default pt
